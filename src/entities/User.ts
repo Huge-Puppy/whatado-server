@@ -5,10 +5,13 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   BaseEntity,
-  OneToMany,
+  ManyToMany,
+  JoinTable,
+  ManyToOne,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
-import { Post } from "./Post";
+import { Event } from "./Event";
+import { Interest } from "./Interest";
 
 @ObjectType()
 @Entity()
@@ -17,15 +20,19 @@ export class User extends BaseEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Field(() => String)
+  @Field(() => Date)
   @CreateDateColumn()
   createdAt = new Date();
 
-  @Field(() => String)
+  @Field(() => Date)
   @UpdateDateColumn()
   updatedAt = new Date();
 
-  @Field(() => String)
+  @Field()
+  @Column({ unique: true })
+  username!: string;
+
+  @Field()
   @Column({ unique: true })
   email!: string;
 
@@ -34,8 +41,26 @@ export class User extends BaseEntity {
 
   @Field(() => Int)
   @Column({ default: 0 })
-  count!: number;
+  refreshCount!: number;
 
-  @OneToMany(() => Post, (post) => post.creator)
-  posts: Post[];
+  @Field()
+  @Column()
+  birthday!: Date;
+
+  @Field()
+  @Column({ default: "" })
+  profilePhotoUrl!: string;
+
+  @Field()
+  @Column({ default: false })
+  verified!: boolean;
+
+  @Field(() => [Interest])
+  @ManyToMany(() => Interest, interest => interest.peopleInterested)
+  @JoinTable()
+  interests: Interest[]
+
+  @Field(() => [Event])
+  @ManyToOne(() => Event, event => event.creator)
+  myEvents: Event[];
 }

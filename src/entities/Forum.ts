@@ -1,18 +1,17 @@
 import {
   Entity,
   PrimaryGeneratedColumn,
-  Column,
   CreateDateColumn,
   UpdateDateColumn,
   BaseEntity,
   ManyToOne,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
-import { User } from "./User";
+import { Chat } from "./Chat";
 
 @ObjectType()
 @Entity()
-export class Post extends BaseEntity {
+export class Forum extends BaseEntity {
   @Field(() => Int)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -25,18 +24,7 @@ export class Post extends BaseEntity {
   @UpdateDateColumn()
   updatedAt = new Date();
 
-  @Field()
-  @Column({ default: "" })
-  title!: string;
-
-  @Field()
-  @Column()
-  text!: string;
-
-  @Field()
-  @Column()
-  creatorId: number;
-
-  @ManyToOne(() => User, (user) => user.posts)
-  creator: User;
+  @Field(() => [Chat])
+  @ManyToOne(() => Chat, chat => chat.forum)
+  chats: Chat[];
 }
