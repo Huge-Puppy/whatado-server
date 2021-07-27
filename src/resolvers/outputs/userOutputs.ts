@@ -1,9 +1,9 @@
 import { User } from "../../entities/User";
-import { Field, ObjectType } from "type-graphql";
-import { ApiResponse } from "./general";
+import { ObjectType } from "type-graphql";
+import { ApiListResponse, ApiResponse } from "./general";
 
 @ObjectType()
-export class UserApiResponse extends ApiResponse(User) {
-  @Field(() => User, { nullable: true })
-  data?: User;
-}
+export class UserApiResponse extends ApiResponse(User) {}
+
+@ObjectType()
+export class UsersApiResponse extends ApiListResponse(User) {}

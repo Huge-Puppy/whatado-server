@@ -13,14 +13,20 @@ import argon2 from "argon2";
 import { sign } from "jsonwebtoken";
 import { sendEmail } from "../utils/sendEmail";
 import { isAuth } from "../middleware/isAuth";
-import { UserApiResponse } from "./outputs/userOutputs";
+import { UserApiResponse, UsersApiResponse } from "./outputs/userOutputs";
 import { UserInput } from "./inputs/userInputs";
+import { BoolApiResponse } from "./outputs/general";
 
 @Resolver()
 export class UserResolver {
-  @Query(() => [User])
-  users(): Promise<User[]> {
-    return User.find();
+  @Query(() => UsersApiResponse)
+  async users(): Promise<UsersApiResponse> {
+    try {
+      const users = await User.find();
+      return { nodes: users };
+    } catch (e) {
+      return { errors: [{ message: e.message }] };
+    }
   }
   @Mutation(() => UserApiResponse)
   async register(@Arg("options") options: UserInput): Promise<UserApiResponse> {
@@ -64,7 +70,7 @@ export class UserResolver {
       process.env.REFRESH_TOKEN_SECRET!,
       { expiresIn: "7d" }
     );
-    return { data: user, jwt: { accessToken, refreshToken } };
+    return { nodes: user, jwt: { accessToken, refreshToken } };
   }
 
   @Mutation(() => UserApiResponse)
@@ -96,29 +102,29 @@ export class UserResolver {
       process.env.REFRESH_TOKEN_SECRET!,
       { expiresIn: "7d" }
     );
-    return { data: user, jwt: { accessToken, refreshToken } };
+    return { nodes: user, jwt: { accessToken, refreshToken } };
   }
 
-  @Query(() => User, { nullable: true })
+  @Query(() => UserApiResponse, { nullable: true })
   @UseMiddleware(isAuth)
   me(@Ctx() { req }: MyContext) {
     if (!req.session.userId) {
       return null;
     }
-    return User.findOne(req.session.userId);
+    return { nodes: User.findOne(req.session.userId) };
   }
 
-  @Mutation(() => Boolean)
-  async forgotPassword(@Arg("email") email: string) {
+  @Mutation(() => BoolApiResponse)
+  async forgotPassword(@Arg("email") email: string): Promise<BoolApiResponse> {
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return false;
+      return { nodes: false };
     }
     // '<a href="http://localhost:3000/change-password/<specialjwt>"
     await sendEmail(
       user.email,
       "your temporary password is sdlf234ksd!&dk OR click link to reset"
     );
-    return true;
+    return { nodes: true };
   }
 }

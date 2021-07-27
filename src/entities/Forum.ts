@@ -5,9 +5,11 @@ import {
   UpdateDateColumn,
   BaseEntity,
   ManyToOne,
+  OneToOne,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { Chat } from "./Chat";
+import { Event } from "./Event";
 
 @ObjectType()
 @Entity()
@@ -27,4 +29,8 @@ export class Forum extends BaseEntity {
   @Field(() => [Chat])
   @ManyToOne(() => Chat, chat => chat.forum)
   chats: Chat[];
+
+  @Field(() => [Chat])
+  @OneToOne(() => Event, event => event.forum)
+  event: Event;
 }

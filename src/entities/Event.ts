@@ -8,17 +8,19 @@ import {
   ManyToMany,
   JoinTable,
   OneToMany,
+  OneToOne,
 } from "typeorm";
 import { Field, Float, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
 import { Interest } from "./Interest";
 import { Gender } from "../types";
+import { Forum } from "./Forum";
 
 @ObjectType()
 @Entity()
 export class Event extends BaseEntity {
   @Field(() => Int)
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({type: "int"})
   id!: number;
 
   @Field(() => Date)
@@ -63,12 +65,17 @@ export class Event extends BaseEntity {
   @JoinTable()
   relatedInterests: Interest[];
 
+  @Field(() => Forum)
+  @OneToOne(() => Forum, forum => forum.event)
+  @JoinTable()
+  forum: Forum;
+
   @Field()
   @Column({default: ""})
   filterLocation!: string;
 
   @Field(() => Float)
-  @Column()
+  @Column({type: "float"})
   filterRadius!: number;
 
   @Field(() => Gender)
