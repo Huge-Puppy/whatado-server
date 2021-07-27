@@ -12,15 +12,6 @@ import { createConnection } from "typeorm";
 
 const main = async () => {
   await createConnection();
-  // await createConnection({
-  // type: "postgres",
-  // database: "whatado",
-  // username: process.env.POSTGRES_USERNAME,
-  // password: process.env.POSTGRES_SECRET,
-  // logging: true,
-  // synchronize: !__prod__,
-  // entities: [Event, User, Interest, Forum, Chat],
-  // });
 
   const app = express();
 
