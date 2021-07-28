@@ -1,12 +1,10 @@
 import { Request, Response } from "express";
-import { Session, SessionData } from "express-session";
 import { registerEnumType } from "type-graphql";
 
 export type MyContext = {
-  req: Request & {
-    session: Session & Partial<SessionData> & { userId?: number };
-  };
+  req: Request;
   res: Response;
+  payload?: { userId: string; refreshCount: string };
 };
 
 export enum Gender {

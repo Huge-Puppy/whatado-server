@@ -10,16 +10,17 @@ import {
 } from "type-graphql";
 import { User } from "../entities/User";
 import argon2 from "argon2";
-import { sign } from "jsonwebtoken";
 import { sendEmail } from "../utils/sendEmail";
 import { isAuth } from "../middleware/isAuth";
 import { UserApiResponse, UsersApiResponse } from "./outputs/userOutputs";
 import { UserInput } from "./inputs/userInputs";
 import { BoolApiResponse } from "./outputs/general";
+import { createAccessToken, createRefreshToken } from "src/auth";
 
 @Resolver()
 export class UserResolver {
   @Query(() => UsersApiResponse)
+  @UseMiddleware(isAuth)
   async users(): Promise<UsersApiResponse> {
     try {
       const users = await User.find();
@@ -52,24 +53,15 @@ export class UserResolver {
         birthday: options.birthday,
       }).save();
     } catch (e) {
-      if (e.code === "23505" || e.detail.includes("already exists")) {
-        return {
-          errors: [{ message: "email already in use", field: "user" }],
-        };
-      }
+      // if (e.code === "23505" || e.detail.includes("already exists"))
+      return {
+        errors: [
+          { message: `email already in use: ${e.message}`, field: "user" },
+        ],
+      };
     }
-    const accessToken = sign(
-      { userId: user?.id },
-      process.env.ACCESS_TOKEN_SECRET!,
-      {
-        expiresIn: "15min",
-      }
-    );
-    const refreshToken = sign(
-      { userId: user?.id, count: user?.refreshCount },
-      process.env.REFRESH_TOKEN_SECRET!,
-      { expiresIn: "7d" }
-    );
+    const accessToken = createAccessToken(user);
+    const refreshToken = createRefreshToken(user);
     return { nodes: user, jwt: { accessToken, refreshToken } };
   }
 
@@ -81,6 +73,7 @@ export class UserResolver {
           ? { email: options.email!.toLowerCase() }
           : { username: options.username!.toLowerCase() },
     });
+    console.log(user);
     if (!user) {
       return {
         errors: [{ field: "email", message: "email not in use" }],
@@ -92,26 +85,18 @@ export class UserResolver {
         errors: [{ field: "password", message: "incorrect password" }],
       };
     }
-    const accessToken = sign(
-      { userId: user.id },
-      process.env.ACCESS_TOKEN_SECRET!,
-      { expiresIn: "15min" }
-    );
-    const refreshToken = sign(
-      { userId: user.id, count: user.refreshCount },
-      process.env.REFRESH_TOKEN_SECRET!,
-      { expiresIn: "7d" }
-    );
+    const accessToken = createAccessToken(user);
+    const refreshToken = createRefreshToken(user);
     return { nodes: user, jwt: { accessToken, refreshToken } };
   }
 
   @Query(() => UserApiResponse, { nullable: true })
   @UseMiddleware(isAuth)
-  me(@Ctx() { req }: MyContext) {
-    if (!req.session.userId) {
+  me(@Ctx() { payload }: MyContext) {
+    if (!payload) {
       return null;
     }
-    return { nodes: User.findOne(req.session.userId) };
+    return { nodes: User.findOne(payload.userId) };
   }
 
   @Mutation(() => BoolApiResponse)

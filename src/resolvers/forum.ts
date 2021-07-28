@@ -1,13 +1,15 @@
 import { Forum } from "../entities/Forum";
-import { Arg, Mutation, Query, Resolver } from "type-graphql";
+import { Arg, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
 import { BaseEntity } from "typeorm";
 import { ForumApiResponse, ForumsApiResponse } from "./outputs/forumOutputs";
 import { ForumInput } from "./inputs/forumInputs";
 import { BoolApiResponse } from "./outputs/general";
+import { isAuth } from "../middleware/isAuth";
 
 @Resolver()
 export class ForumResolver extends BaseEntity {
   @Query(() => ForumApiResponse)
+  @UseMiddleware(isAuth)
   async forum(@Arg("id") id: number): Promise<ForumApiResponse> {
     try {
       const forum = await Forum.findOneOrFail({ where: { id } });
@@ -22,6 +24,7 @@ export class ForumResolver extends BaseEntity {
   }
 
   @Query(() => ForumsApiResponse)
+  @UseMiddleware(isAuth)
   async forums(
     @Arg("options") options: ForumInput
   ): Promise<ForumsApiResponse> {
@@ -39,6 +42,7 @@ export class ForumResolver extends BaseEntity {
   }
 
   @Mutation(() => ForumApiResponse)
+  @UseMiddleware(isAuth)
   async createForum(
     @Arg("options") options: ForumInput
   ): Promise<ForumApiResponse> {
@@ -56,6 +60,7 @@ export class ForumResolver extends BaseEntity {
   }
 
   @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
   async deleteForum(@Arg("id") id: number): Promise<BoolApiResponse> {
     try {
       await Forum.delete({ id });
@@ -66,6 +71,7 @@ export class ForumResolver extends BaseEntity {
   }
 
   @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
   async updateForum(
     @Arg("options") options: ForumInput
   ): Promise<BoolApiResponse> {
