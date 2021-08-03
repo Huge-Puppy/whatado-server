@@ -15,7 +15,7 @@ import { isAuth } from "../middleware/isAuth";
 import { UserApiResponse, UsersApiResponse } from "./outputs/userOutputs";
 import { UserInput } from "./inputs/userInputs";
 import { BoolApiResponse } from "./outputs/general";
-import { createAccessToken, createRefreshToken } from "src/auth";
+import { createAccessToken, createRefreshToken } from "../auth";
 
 @Resolver()
 export class UserResolver {
