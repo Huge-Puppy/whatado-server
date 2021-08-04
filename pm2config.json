@@ -1,0 +1,9 @@
+{
+  "apps": [{
+    "script" : "./dist/index.js",
+    "env": {
+      "NODE_ENV": "development",
+      "PORT": "8080"
+    }
+  }]
+}
