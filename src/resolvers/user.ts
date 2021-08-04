@@ -73,7 +73,6 @@ export class UserResolver {
           ? { email: options.email!.toLowerCase() }
           : { username: options.username!.toLowerCase() },
     });
-    console.log(user);
     if (!user) {
       return {
         errors: [{ field: "email", message: "email not in use" }],

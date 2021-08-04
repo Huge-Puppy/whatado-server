@@ -18,6 +18,10 @@ const main = async () => {
 
   const app = express();
 
+  app.get("/get_schema", async (_, res) => {
+    return res.download(`${__dirname}/schema.graphql`, "schema.graphql");
+  });
+
   app.post("/refresh_token", async (req, res) => {
     const token = req.body.refreshToken;
     if (!token) {
@@ -44,6 +48,7 @@ const main = async () => {
 
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
+      emitSchemaFile: `${__dirname}/schema.graphql`,
       resolvers: [HelloResolver, EventResolver, UserResolver],
       validate: false,
     }),
