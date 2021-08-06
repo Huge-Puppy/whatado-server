@@ -24,20 +24,25 @@ export class UserResolver {
   async users(): Promise<UsersApiResponse> {
     try {
       const users = await User.find();
-      return { nodes: users };
+      return { ok: true, nodes: users };
     } catch (e) {
-      return { errors: [{ message: e.message }] };
+      return {
+        ok: false,
+        errors: [{ message: e.message }],
+      };
     }
   }
   @Mutation(() => UserApiResponse)
   async register(@Arg("options") options: UserInput): Promise<UserApiResponse> {
     if (!options.email?.includes("@")) {
       return {
+        ok: false,
         errors: [{ field: "email", message: "invalid email address" }],
       };
     }
     if (options.password.length < 6) {
       return {
+        ok: false,
         errors: [
           { field: "password", message: "length must be greater than 6" },
         ],
@@ -55,6 +60,7 @@ export class UserResolver {
     } catch (e) {
       // if (e.code === "23505" || e.detail.includes("already exists"))
       return {
+        ok: false,
         errors: [
           { message: `email already in use: ${e.message}`, field: "user" },
         ],
@@ -62,31 +68,40 @@ export class UserResolver {
     }
     const accessToken = createAccessToken(user);
     const refreshToken = createRefreshToken(user);
-    return { nodes: user, jwt: { accessToken, refreshToken } };
+    return { ok: true, nodes: user, jwt: { accessToken, refreshToken } };
   }
 
   @Mutation(() => UserApiResponse)
   async login(@Arg("options") options: UserInput): Promise<UserApiResponse> {
-    const user = await User.findOne({
-      where:
-        options.username == null
-          ? { email: options.email!.toLowerCase() }
-          : { username: options.username!.toLowerCase() },
-    });
-    if (!user) {
+    try {
+      const user = await User.findOne({
+        where:
+          options.username == null
+            ? { email: options.email!.toLowerCase() }
+            : { username: options.username!.toLowerCase() },
+      });
+      if (!user) {
+        return {
+          ok: false,
+          errors: [{ field: "email", message: "email not in use" }],
+        };
+      }
+      const valid = await argon2.verify(user.password, options.password);
+      if (!valid) {
+        return {
+          ok: false,
+          errors: [{ field: "password", message: "incorrect password" }],
+        };
+      }
+      const accessToken = createAccessToken(user);
+      const refreshToken = createRefreshToken(user);
+      return { ok: true, nodes: user, jwt: { accessToken, refreshToken } };
+    } catch (e) {
       return {
-        errors: [{ field: "email", message: "email not in use" }],
+        ok: false,
+        errors: [{ field: "email", message: "please try again later" }],
       };
     }
-    const valid = await argon2.verify(user.password, options.password);
-    if (!valid) {
-      return {
-        errors: [{ field: "password", message: "incorrect password" }],
-      };
-    }
-    const accessToken = createAccessToken(user);
-    const refreshToken = createRefreshToken(user);
-    return { nodes: user, jwt: { accessToken, refreshToken } };
   }
 
   @Query(() => UserApiResponse, { nullable: true })

@@ -29,7 +29,10 @@ export class EventResolver {
       const event = await Event.create({ ...options }).save();
       return { nodes: event };
     } catch (e) {
-      return { errors: [{ message: e.message }] };
+      return {
+        ok: false,
+        errors: [{ message: e.message }],
+      };
     }
   }
 
@@ -43,6 +46,7 @@ export class EventResolver {
       return { nodes: true };
     } catch (e) {
       return {
+        ok: false,
         errors: [
           {
             field: "updating event",

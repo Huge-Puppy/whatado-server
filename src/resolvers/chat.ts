@@ -16,6 +16,7 @@ export class ChatResolver extends BaseEntity {
       return { nodes: chat };
     } catch (e) {
       return {
+        ok: false,
         errors: [
           { field: "chat", message: `error finding chat: ${e.message}` },
         ],
@@ -31,6 +32,7 @@ export class ChatResolver extends BaseEntity {
       chats = await Chat.find({ where: { ...options } });
     } catch (e) {
       return {
+        ok: false,
         errors: [
           { field: "chat", message: `error retrieving chats: ${e.message}` },
         ],
@@ -49,6 +51,7 @@ export class ChatResolver extends BaseEntity {
       chat = await Chat.create({ ...options }).save();
     } catch (e) {
       return {
+        ok: false,
         errors: [
           { field: "chat", message: `error creating chat: ${e.message}` },
         ],
@@ -63,7 +66,7 @@ export class ChatResolver extends BaseEntity {
     try {
       await Chat.delete({ id });
     } catch (e) {
-      return { nodes: false, errors: [{ message: e.message }] };
+      return { ok: false, errors: [{ message: e.message }] };
     }
     return { nodes: true };
   }
@@ -78,6 +81,7 @@ export class ChatResolver extends BaseEntity {
       return { nodes: true };
     } catch (e) {
       return {
+        ok: false,
         errors: [
           { field: "chat", message: `error updating chat: ${e.message}` },
         ],
