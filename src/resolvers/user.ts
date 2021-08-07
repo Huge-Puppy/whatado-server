@@ -58,11 +58,15 @@ export class UserResolver {
         birthday: options.birthday,
       }).save();
     } catch (e) {
-      // if (e.code === "23505" || e.detail.includes("already exists"))
+      if (e.code === "23505" || e.detail.includes("already exists"))
+        return {
+          ok: false,
+          errors: [{ message: "email already in use", field: "email" }],
+        };
       return {
         ok: false,
         errors: [
-          { message: `email already in use: ${e.message}`, field: "user" },
+          { message: "unexpected error, try again later", field: "name" },
         ],
       };
     }
@@ -117,13 +121,30 @@ export class UserResolver {
   async forgotPassword(@Arg("email") email: string): Promise<BoolApiResponse> {
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return { nodes: false };
+      return {
+        ok: false,
+        errors: [{ field: "email", message: "email not in use" }],
+      };
     }
     // '<a href="http://localhost:3000/change-password/<specialjwt>"
-    await sendEmail(
-      user.email,
-      "your temporary password is sdlf234ksd!&dk OR click link to reset"
-    );
-    return { nodes: true };
+    try {
+      const tempToken = createAccessToken(user);
+      await sendEmail(
+        user.email,
+        `Hi ${user.username},\n\nPlease use this link to reset your password: https://api.whatado.io/change-password/${tempToken}\n\nIt's valid for the next 15 minutes.\n\nThanks,\nWhatado Support`,
+        `<b>reset password</b><a href="https://api.whatado.io/change-password/${tempToken}">https://api.whatado.io/change-password/${tempToken}</a>`
+      );
+      return { ok: true };
+    } catch (e) {
+      console.log(e);
+      return {
+        errors: [
+          {
+            field: "email",
+            message: "something went wrong. try again later.",
+          },
+        ],
+      };
+    }
   }
 }
