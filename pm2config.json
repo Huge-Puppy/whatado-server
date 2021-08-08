@@ -2,7 +2,7 @@
   "apps": [{
     "script" : "./dist/index.js",
     "env": {
-      "NODE_ENV": "development",
+      "NODE_ENV": "prod",
       "PORT": "8080"
     }
   }]
