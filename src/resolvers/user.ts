@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { MyContext } from "../types";
 import {
   Arg,
@@ -24,20 +23,25 @@ export class UserResolver {
   async users(): Promise<UsersApiResponse> {
     try {
       const users = await User.find();
-      return { nodes: users };
+      return { ok: true, nodes: users };
     } catch (e) {
-      return { errors: [{ message: e.message }] };
+      return {
+        ok: false,
+        errors: [{ message: e.message }],
+      };
     }
   }
   @Mutation(() => UserApiResponse)
   async register(@Arg("options") options: UserInput): Promise<UserApiResponse> {
     if (!options.email?.includes("@")) {
       return {
+        ok: false,
         errors: [{ field: "email", message: "invalid email address" }],
       };
     }
     if (options.password.length < 6) {
       return {
+        ok: false,
         errors: [
           { field: "password", message: "length must be greater than 6" },
         ],
@@ -53,40 +57,54 @@ export class UserResolver {
         birthday: options.birthday,
       }).save();
     } catch (e) {
-      // if (e.code === "23505" || e.detail.includes("already exists"))
+      if (e.code === "23505" || e.detail.includes("already exists"))
+        return {
+          ok: false,
+          errors: [{ message: "email already in use", field: "email" }],
+        };
       return {
+        ok: false,
         errors: [
-          { message: `email already in use: ${e.message}`, field: "user" },
+          { message: "unexpected error, try again later", field: "name" },
         ],
       };
     }
     const accessToken = createAccessToken(user);
     const refreshToken = createRefreshToken(user);
-    return { nodes: user, jwt: { accessToken, refreshToken } };
+    return { ok: true, nodes: user, jwt: { accessToken, refreshToken } };
   }
 
   @Mutation(() => UserApiResponse)
   async login(@Arg("options") options: UserInput): Promise<UserApiResponse> {
-    const user = await User.findOne({
-      where:
-        options.username == null
-          ? { email: options.email!.toLowerCase() }
-          : { username: options.username!.toLowerCase() },
-    });
-    if (!user) {
+    try {
+      const user = await User.findOne({
+        where:
+          options.username == null
+            ? { email: options.email!.toLowerCase() }
+            : { username: options.username!.toLowerCase() },
+      });
+      if (!user) {
+        return {
+          ok: false,
+          errors: [{ field: "email", message: "email not in use" }],
+        };
+      }
+      const valid = await argon2.verify(user.password, options.password);
+      if (!valid) {
+        return {
+          ok: false,
+          errors: [{ field: "password", message: "incorrect password" }],
+        };
+      }
+      const accessToken = createAccessToken(user);
+      const refreshToken = createRefreshToken(user);
+      return { ok: true, nodes: user, jwt: { accessToken, refreshToken } };
+    } catch (e) {
       return {
-        errors: [{ field: "email", message: "email not in use" }],
+        ok: false,
+        errors: [{ field: "email", message: "please try again later" }],
       };
     }
-    const valid = await argon2.verify(user.password, options.password);
-    if (!valid) {
-      return {
-        errors: [{ field: "password", message: "incorrect password" }],
-      };
-    }
-    const accessToken = createAccessToken(user);
-    const refreshToken = createRefreshToken(user);
-    return { nodes: user, jwt: { accessToken, refreshToken } };
   }
 
   @Query(() => UserApiResponse, { nullable: true })
@@ -102,13 +120,30 @@ export class UserResolver {
   async forgotPassword(@Arg("email") email: string): Promise<BoolApiResponse> {
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      return { nodes: false };
+      return {
+        ok: false,
+        errors: [{ field: "email", message: "email not in use" }],
+      };
     }
     // '<a href="http://localhost:3000/change-password/<specialjwt>"
-    await sendEmail(
-      user.email,
-      "your temporary password is sdlf234ksd!&dk OR click link to reset"
-    );
-    return { nodes: true };
+    try {
+      const tempToken = createAccessToken(user);
+      await sendEmail(
+        user.email,
+        `Hi ${user.username},\n\nPlease use this link to reset your password: https://api.whatado.io/change-password/${tempToken}\n\nIt's valid for the next 15 minutes.\n\nThanks,\nWhatado Support`,
+        `<b>reset password</b><a href="https://api.whatado.io/change-password/${tempToken}">https://api.whatado.io/change-password/${tempToken}</a>`
+      );
+      return { ok: true };
+    } catch (e) {
+      console.log(e);
+      return {
+        errors: [
+          {
+            field: "email",
+            message: "something went wrong. try again later.",
+          },
+        ],
+      };
+    }
   }
 }

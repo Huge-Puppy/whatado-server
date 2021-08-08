@@ -29,7 +29,7 @@ export class User extends BaseEntity {
   updatedAt = new Date();
 
   @Field()
-  @Column({ unique: true })
+  @Column()
   username!: string;
 
   @Field()

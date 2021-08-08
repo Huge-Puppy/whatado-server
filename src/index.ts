@@ -1,4 +1,4 @@
-import "dotenv/config";
+import './env';
 import "reflect-metadata";
 import { __prod__ } from "./constants";
 import express from "express";
@@ -23,7 +23,8 @@ const main = async () => {
   });
 
   app.post("/refresh_token", async (req, res) => {
-    const token = req.body.refreshToken;
+    const authorization = req.headers["authorization"];
+    const token = authorization?.split(" ")[1];
     if (!token) {
       return res.send({ ok: false, accessToken: "", refreshToken: "" });
     }
@@ -32,18 +33,26 @@ const main = async () => {
     try {
       payload = verify(token, process.env.REFRESH_TOKEN_SECRET!);
     } catch (e) {
-      return res.send({ ok: false, accessToken: "", refreshToken: "" });
+      return res.send({ ok: false, accessToken: null, refreshToken: null });
     }
 
     const user = await User.findOneOrFail({ id: payload.userId });
     if (!user) {
       return res.send({ ok: false, accessToken: "", refreshToken: "" });
     }
-    return res.send({
-      ok: true,
-      accessToken: createAccessToken(user),
-      refreshToken: createRefreshToken(user),
-    });
+    if (payload.refreshCount === user.refreshCount) {
+      return res.send({
+        ok: true,
+        accessToken: createAccessToken(user),
+        refreshToken: createRefreshToken(user),
+      });
+    } else {
+      User.update(
+        { id: user.id },
+        { refreshCount: user.refreshCount ?? 0 + 1 }
+      );
+      return res.send({ ok: false, accessToken: null, refreshToken: null });
+    }
   });
 
   const apolloServer = new ApolloServer({

@@ -16,6 +16,7 @@ export class ForumResolver extends BaseEntity {
       return { nodes: forum };
     } catch (e) {
       return {
+        ok: false,
         errors: [
           { field: "forum", message: `error finding forum: ${e.message}` },
         ],
@@ -33,6 +34,7 @@ export class ForumResolver extends BaseEntity {
       forums = await Forum.find({ where: { ...options } });
     } catch (e) {
       return {
+        ok: false,
         errors: [
           { field: "forum", message: `error retrieving forums: ${e.message}` },
         ],
@@ -51,6 +53,7 @@ export class ForumResolver extends BaseEntity {
       forum = await Forum.create({ ...options }).save();
     } catch (e) {
       return {
+        ok: false,
         errors: [
           { field: "forum", message: `error creating forum: ${e.message}` },
         ],
@@ -65,7 +68,7 @@ export class ForumResolver extends BaseEntity {
     try {
       await Forum.delete({ id });
     } catch (e) {
-      return { nodes: false, errors: [{ message: e.message }] };
+      return { ok: false, errors: [{ message: e.message }] };
     }
     return { nodes: true };
   }
@@ -80,6 +83,7 @@ export class ForumResolver extends BaseEntity {
       return { nodes: true };
     } catch (e) {
       return {
+        ok: false,
         errors: [
           { field: "forum", message: `error updating forum: ${e.message}` },
         ],
