@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { MyContext } from "../types";
 import {
   Arg,

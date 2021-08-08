@@ -1,4 +1,4 @@
-import "dotenv/config";
+import './env';
 import "reflect-metadata";
 import { __prod__ } from "./constants";
 import express from "express";

@@ -6,8 +6,8 @@
     "scripts": {
         "tsc": "tsc",
         "watch": "tsc -w",
-        "dev": "nodemon dist/index.js",
-        "start": "node dist/index.js"
+        "dev": "cross-env NODE_ENV=local-dev nodemon dist/index.js",
+        "start": "cross-env NODE_ENV=prod node dist/index.js"
     },
     "keywords": [],
     "author": "",
@@ -26,6 +26,7 @@
         "apollo-server-express": "^3.0.2",
         "argon2": "^0.28.2",
         "class-validator": "^0.13.1",
+        "cross-env": "^7.0.3",
         "dotenv": "^10.0.0",
         "express": "^4.17.1",
         "express-session": "^1.17.2",

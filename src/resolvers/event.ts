@@ -10,14 +10,18 @@ export class EventResolver {
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
   async events(): Promise<EventsApiResponse> {
-    const events = await Event.find();
-    return { nodes: events };
+    try {
+      const events = await Event.find();
+      return { ok: true, nodes: events };
+    } catch (e) {
+      return { ok: false, errors: [{ field: "server", message: e.message }] };
+    }
   }
 
   @Query(() => Event, { nullable: true })
   @UseMiddleware(isAuth)
   async event(@Arg("id") id: number): Promise<EventApiResponse> {
-    return { nodes: await Event.findOne(id) };
+    return { ok: true, nodes: await Event.findOne(id) };
   }
 
   @Mutation(() => EventApiResponse)
@@ -27,7 +31,7 @@ export class EventResolver {
   ): Promise<EventApiResponse> {
     try {
       const event = await Event.create({ ...options }).save();
-      return { nodes: event };
+      return { ok: true, nodes: event };
     } catch (e) {
       return {
         ok: false,
@@ -43,7 +47,7 @@ export class EventResolver {
   ): Promise<BoolApiResponse> {
     try {
       await Event.update({ id: options.id }, { ...options });
-      return { nodes: true };
+      return { ok: true, nodes: true };
     } catch (e) {
       return {
         ok: false,
@@ -63,8 +67,8 @@ export class EventResolver {
     try {
       await Event.delete(id);
     } catch (e) {
-      return { nodes: false };
+      return { ok: false, errors: [{ field: "server", message: e.message }] };
     }
-    return { nodes: true };
+    return { ok: true };
   }
 }
