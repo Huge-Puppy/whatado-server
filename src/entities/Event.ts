@@ -40,8 +40,8 @@ export class Event extends BaseEntity {
   location!: string;
 
   @Field()
-  @Column({default: ""})
-  pictureUrl: string;
+  @Column({nullable: true})
+  pictureUrl?: string;
 
   @Field()
   @Column({ default: "" })

@@ -30,7 +30,7 @@ export class Forum extends BaseEntity {
   @ManyToOne(() => Chat, chat => chat.forum)
   chats: Chat[];
 
-  @Field(() => [Chat])
+  @Field(() => Event)
   @OneToOne(() => Event, event => event.forum)
   event: Event;
 }
