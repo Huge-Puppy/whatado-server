@@ -4,17 +4,19 @@ import { EventFilterInput, EventInput } from "./inputs/eventInputs";
 import { EventApiResponse, EventsApiResponse } from "./outputs/eventOutput";
 import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
-import { User } from "../entities/User";
-import { Interest } from "../entities/Interest";
 import { Forum } from "../entities/Forum";
+import { Interest } from "../entities/Interest";
+import { getRepository } from "typeorm";
 
 @Resolver()
 export class EventResolver {
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
-  async events(): Promise<EventsApiResponse> {
+  async events(
+    @Arg("options") options: EventFilterInput
+  ): Promise<EventsApiResponse> {
     try {
-      const events = await Event.find();
+      const events = await Event.find({ ...options });
       return { ok: true, nodes: events };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
@@ -33,22 +35,28 @@ export class EventResolver {
     @Arg("options") options: EventInput
   ): Promise<EventApiResponse> {
     try {
-      const creator = await User.findOneOrFail({id: options.creatorId});
-      const relatedInterests = await Interest.findByIds(options.relatedInterestsIds ?? []);
       const forum = await Forum.create({
         chats: [],
       }).save();
-      const event = await Event.create({ 
-        ...options,
-        creator: creator,
-        wannago: [],
-        relatedInterests: relatedInterests,
-        forum: forum,
-        filterLocation: options.filterLocation,
-        filterRadius: options.filterRadius,
-        filterGender: options.filterGender,
+      const relatedInterests = await Interest.findByIds(
+        options.relatedInterestsIds
+      );
+
+      // EventInput doesn't implement Event... so I can spread the options argument.
+      const event = await Event.create({
+        time: options.time,
+        location: options.location,
+        pictureUrl: options.pictureUrl,
+        title: options.title,
+        description: options.description,
         filterAge: options.filterAge,
-       }).save();
+        filterGender: options.filterGender,
+        filterRadius: options.filterRadius,
+        creator: { id: options.creatorId },
+        wannago: [],
+        relatedInterests,
+        forum: forum,
+      }).save();
       return { ok: true, nodes: event };
     } catch (e) {
       return {
@@ -64,7 +72,13 @@ export class EventResolver {
     @Arg("options") options: EventFilterInput
   ): Promise<BoolApiResponse> {
     try {
-      await Event.update({ id: options.id }, { ...options });
+      const relatedInterests =
+        options.relatedInterestsIds != null
+          ? options.relatedInterestsIds?.map((id) => ({ id }))
+          : undefined;
+      const event = await Event.findOne({ id: options.id });
+      event!.title = options.title as any;
+        event!.relatedInterests = relatedInterests as any;
       return { ok: true, nodes: true };
     } catch (e) {
       return {

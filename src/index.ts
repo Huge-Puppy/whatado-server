@@ -12,6 +12,9 @@ import { createConnection } from "typeorm";
 import { verify } from "jsonwebtoken";
 import { User } from "./entities/User";
 import { createAccessToken, createRefreshToken } from "./auth";
+import { InterestResolver } from './resolvers/interest';
+import { ChatResolver } from './resolvers/chat';
+import { ForumResolver } from './resolvers/forum';
 
 const main = async () => {
   await createConnection();
@@ -58,7 +61,7 @@ const main = async () => {
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
       emitSchemaFile: `${__dirname}/schema.graphql`,
-      resolvers: [HelloResolver, EventResolver, UserResolver],
+      resolvers: [HelloResolver, EventResolver, UserResolver, InterestResolver, ChatResolver, ForumResolver],
       validate: false,
     }),
     context: ({ req, res }): MyContext => ({ req, res }),

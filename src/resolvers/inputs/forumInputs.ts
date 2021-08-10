@@ -3,15 +3,15 @@ import { Event } from "../../entities/Event";
 import { Field, InputType, Int } from "type-graphql";
 
 @InputType()
-export class ForumInput implements Partial<Forum> {
+export class ForumInput {
+  @Field(() => Int)
+  eventId: number
+}
+
+@InputType()
+export class ForumFilterInput implements Partial<Forum> {
  @Field(() => Int, {nullable: true})
   id?: number;
-
-  @Field(() => String, {nullable: true})
-  createdAt?:  Date;
-
-  @Field(() => String, {nullable: true})
-  updatedAt?: Date;
 
   @Field(() => Event, {nullable: true})
   event?: Event

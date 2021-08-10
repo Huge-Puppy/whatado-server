@@ -3,7 +3,7 @@ import { Event } from "../../entities/Event";
 import { Field, Float, InputType, Int } from "type-graphql";
 
 @InputType()
-export class EventInput implements Partial<Event> {
+export class EventInput implements Partial<Event>{
   @Field()
   title: string;
   @Field()
@@ -29,9 +29,13 @@ export class EventInput implements Partial<Event> {
 }
 
 @InputType()
-export class EventFilterInput implements Partial<Event> {
+export class EventFilterInput implements Partial<Event>{
   @Field(() => Int, { nullable: true })
   id?: number;
+  @Field(() => String, {nullable: true})
+  createdAt?:  Date;
+  @Field(() => String, {nullable: true})
+  updatedAt?: Date;
   @Field({ nullable: true })
   title?: string;
   @Field({ nullable: true })
@@ -42,8 +46,6 @@ export class EventFilterInput implements Partial<Event> {
   pictureUrl?: string;
   @Field({ nullable: true })
   location?: string;
-  @Field(() => [Int], { nullable: true })
-  relatedInterestsIds?: number[];
   @Field({ nullable: true })
   filterLocation?: string;
   @Field(() => Float, { nullable: true })
@@ -52,6 +54,12 @@ export class EventFilterInput implements Partial<Event> {
   filterGender?: Gender;
   @Field({ nullable: true })
   filterAge?: string;
-  @Field(() => [Int], { nullable: true })
+  @Field(() => Int, { nullable: true })
   creatorId?: number;
+  @Field(() => [Int], { nullable: true })
+  wannagoIds?: number[];
+  @Field(() => Int, { nullable: true })
+  forumId?: number;
+  @Field(() => [Int], { nullable: true })
+  relatedInterestsIds?: number[];
 }

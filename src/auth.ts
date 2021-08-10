@@ -6,7 +6,7 @@ export const createAccessToken = (user: User) =>
     { userId: user?.id, refreshCount: user?.refreshCount },
     process.env.ACCESS_TOKEN_SECRET!,
     {
-      expiresIn: "15min",
+      expiresIn: "100min",
     }
   );
 

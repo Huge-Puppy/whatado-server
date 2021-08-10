@@ -9,6 +9,7 @@ import {
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
+import { Event } from "./Event";
 
 @ObjectType()
 @Entity()
@@ -36,4 +37,8 @@ export class Interest extends BaseEntity {
   @Field(() => [User])
   @ManyToMany(() => User, user => user.interests)
   peopleInterested: User[];
+
+  @Field(() => [Event])
+  @ManyToMany(() => Event, event => event.relatedInterests, {cascade: ["update"]})
+  relatedEvents: Event[];
 }

@@ -9,6 +9,7 @@ import {
   JoinTable,
   OneToMany,
   OneToOne,
+  JoinColumn,
 } from "typeorm";
 import { Field, Float, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
@@ -20,7 +21,7 @@ import { Forum } from "./Forum";
 @Entity()
 export class Event extends BaseEntity {
   @Field(() => Int)
-  @PrimaryGeneratedColumn({type: "int"})
+  @PrimaryGeneratedColumn({ type: "int" })
   id!: number;
 
   @Field(() => Date)
@@ -36,11 +37,11 @@ export class Event extends BaseEntity {
   time: Date;
 
   @Field()
-  @Column({default: ""})
+  @Column({ default: "" })
   location!: string;
 
   @Field()
-  @Column({nullable: true})
+  @Column({ nullable: true })
   pictureUrl?: string;
 
   @Field()
@@ -48,7 +49,7 @@ export class Event extends BaseEntity {
   title!: string;
 
   @Field()
-  @Column({default: ""})
+  @Column({ default: "" })
   description!: string;
 
   @Field(() => User)
@@ -60,29 +61,30 @@ export class Event extends BaseEntity {
   @JoinTable()
   wannago: User[];
 
+
   @Field(() => [Interest])
-  @ManyToMany(() => Interest)
+  @ManyToMany(() => Interest, interest => interest.relatedEvents, { eager: true, cascade: ["update"] })
   @JoinTable()
   relatedInterests: Interest[];
 
   @Field(() => Forum)
-  @OneToOne(() => Forum, forum => forum.event)
-  @JoinTable()
+  @OneToOne(() => Forum, (forum) => forum.event)
+  @JoinColumn()
   forum: Forum;
 
   @Field()
-  @Column({default: ""})
+  @Column({ default: "" })
   filterLocation!: string;
 
   @Field(() => Float)
-  @Column({type: "float"})
+  @Column({ type: "float" })
   filterRadius!: number;
 
   @Field(() => Gender)
-  @Column({type: "enum", enum: Gender, default: Gender.BOTH})
+  @Column({ type: "enum", enum: Gender, default: Gender.BOTH })
   filterGender!: Gender;
 
   @Field()
-  @Column({default: ""})
+  @Column({ default: "" })
   filterAge!: string;
 }
