@@ -1,4 +1,4 @@
-import './env';
+import "./env";
 import "reflect-metadata";
 import { __prod__ } from "./constants";
 import express from "express";
@@ -12,13 +12,14 @@ import { createConnection } from "typeorm";
 import { verify } from "jsonwebtoken";
 import { User } from "./entities/User";
 import { createAccessToken, createRefreshToken } from "./auth";
-import { InterestResolver } from './resolvers/interest';
-import { ChatResolver } from './resolvers/chat';
-import { ForumResolver } from './resolvers/forum';
+import { InterestResolver } from "./resolvers/interest";
+import { ChatResolver } from "./resolvers/chat";
+import { ForumResolver } from "./resolvers/forum";
+import { createUserLoader } from "./resolvers/loaders/creatorLoader";
+import { createInterestLoader } from "./resolvers/loaders/interestLoader";
 
 const main = async () => {
   await createConnection();
-
   const app = express();
 
   app.get("/get_schema", async (_, res) => {
@@ -61,10 +62,22 @@ const main = async () => {
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
       emitSchemaFile: `${__dirname}/schema.graphql`,
-      resolvers: [HelloResolver, EventResolver, UserResolver, InterestResolver, ChatResolver, ForumResolver],
+      resolvers: [
+        HelloResolver,
+        EventResolver,
+        UserResolver,
+        InterestResolver,
+        ChatResolver,
+        ForumResolver,
+      ],
       validate: false,
     }),
-    context: ({ req, res }): MyContext => ({ req, res }),
+    context: ({ req, res }): MyContext => ({
+      req,
+      res,
+      userLoader: createUserLoader(),
+      interestLoader: createInterestLoader(),
+    }),
   });
 
   await apolloServer.start();

@@ -6,10 +6,12 @@ import {
   BaseEntity,
   ManyToOne,
   OneToOne,
+  OneToMany,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { Chat } from "./Chat";
 import { Event } from "./Event";
+import { ChatNotification } from "./ChatNotification";
 
 @ObjectType()
 @Entity()
@@ -26,11 +28,24 @@ export class Forum extends BaseEntity {
   @UpdateDateColumn()
   updatedAt = new Date();
 
+  @Field(() => [ChatNotification])
+  @OneToMany(() => ChatNotification, (n) => n.forum, {
+    onDelete: "SET NULL",
+    cascade: ["update", "insert"],
+  })
+  userNotifications: ChatNotification[];
+
   @Field(() => [Chat])
-  @ManyToOne(() => Chat, chat => chat.forum)
+  @ManyToOne(() => Chat, (chat) => chat.forum, {
+    cascade: ["insert"],
+    onDelete: "SET NULL",
+  })
   chats: Chat[];
 
   @Field(() => Event)
-  @OneToOne(() => Event, event => event.forum)
+  @OneToOne(() => Event, (event) => event.forum, {
+    onDelete: "SET NULL",
+    cascade: ["update", "insert"],
+  })
   event: Event;
 }

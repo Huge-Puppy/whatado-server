@@ -4,6 +4,8 @@ import { Field, Float, InputType, Int } from "type-graphql";
 
 @InputType()
 export class EventInput implements Partial<Event>{
+  @Field(() => Int, { nullable: true })
+  id?: number;
   @Field()
   title: string;
   @Field()
@@ -24,7 +26,7 @@ export class EventInput implements Partial<Event>{
   filterGender: Gender;
   @Field()
   filterAge: string;
-  @Field(() => [Int])
+  @Field(() => Int)
   creatorId: number;
 }
 

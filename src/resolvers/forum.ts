@@ -1,9 +1,7 @@
 import { Forum } from "../entities/Forum";
-import { Arg, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
+import { Arg, Int, Query, Resolver, UseMiddleware } from "type-graphql";
 import { BaseEntity } from "typeorm";
-import { ForumApiResponse, ForumsApiResponse } from "./outputs/forumOutputs";
-import { ForumInput } from "./inputs/forumInputs";
-import { BoolApiResponse } from "./outputs/general";
+import { ForumApiResponse, ForumsApiResponse } from "./outputs/modelOutputs";
 import { isAuth } from "../middleware/isAuth";
 
 @Resolver()
@@ -12,7 +10,7 @@ export class ForumResolver extends BaseEntity {
   @UseMiddleware(isAuth)
   async forum(@Arg("id") id: number): Promise<ForumApiResponse> {
     try {
-      const forum = await Forum.findOneOrFail({ where: { id } });
+      const forum = await Forum.findOneOrFail(id);
       return { nodes: forum };
     } catch (e) {
       return {
@@ -26,66 +24,17 @@ export class ForumResolver extends BaseEntity {
 
   @Query(() => ForumsApiResponse)
   @UseMiddleware(isAuth)
-  async forums(
-    @Arg("options") options: ForumInput
+  async getForumsByEventId(
+    @Arg("ids", () => Int) ids: number[]
   ): Promise<ForumsApiResponse> {
-    let forums;
     try {
-      forums = await Forum.find({ where: { ...options } });
+      const forums = await Forum.findByIds(ids, {relations: ["userNotifications"]});
+      return { nodes: forums };
     } catch (e) {
       return {
         ok: false,
         errors: [
           { field: "forum", message: `error retrieving forums: ${e.message}` },
-        ],
-      };
-    }
-    return { nodes: forums };
-  }
-
-  @Mutation(() => ForumApiResponse)
-  @UseMiddleware(isAuth)
-  async createForum(
-    @Arg("options") options: ForumInput
-  ): Promise<ForumApiResponse> {
-    let forum;
-    try {
-      forum = await Forum.create({ ...options }).save();
-    } catch (e) {
-      return {
-        ok: false,
-        errors: [
-          { field: "forum", message: `error creating forum: ${e.message}` },
-        ],
-      };
-    }
-    return { nodes: forum };
-  }
-
-  @Mutation(() => BoolApiResponse)
-  @UseMiddleware(isAuth)
-  async deleteForum(@Arg("id") id: number): Promise<BoolApiResponse> {
-    try {
-      await Forum.delete({ id });
-    } catch (e) {
-      return { ok: false, errors: [{ message: e.message }] };
-    }
-    return { nodes: true };
-  }
-
-  @Mutation(() => BoolApiResponse)
-  @UseMiddleware(isAuth)
-  async updateForum(
-    @Arg("options") options: ForumInput
-  ): Promise<BoolApiResponse> {
-    try {
-      await Forum.update({ id: options.id }, { ...options });
-      return { nodes: true };
-    } catch (e) {
-      return {
-        ok: false,
-        errors: [
-          { field: "forum", message: `error updating forum: ${e.message}` },
         ],
       };
     }

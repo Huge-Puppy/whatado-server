@@ -11,7 +11,7 @@ import { User } from "../entities/User";
 import argon2 from "argon2";
 import { sendEmail } from "../utils/sendEmail";
 import { isAuth } from "../middleware/isAuth";
-import { UserApiResponse, UsersApiResponse } from "./outputs/userOutputs";
+import { UserApiResponse, UsersApiResponse } from "./outputs/modelOutputs";
 import { UserInput } from "./inputs/userInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { createAccessToken, createRefreshToken } from "../auth";
@@ -125,13 +125,17 @@ export class UserResolver {
         errors: [{ field: "email", message: "email not in use" }],
       };
     }
-    // '<a href="http://localhost:3000/change-password/<specialjwt>"
     try {
       const tempToken = createAccessToken(user);
       await sendEmail(
         user.email,
-        `Hi ${user.username},\n\nPlease use this link to reset your password: https://api.whatado.io/change-password/${tempToken}\n\nIt's valid for the next 15 minutes.\n\nThanks,\nWhatado Support`,
-        `<b>reset password</b><a href="https://api.whatado.io/change-password/${tempToken}">https://api.whatado.io/change-password/${tempToken}</a>`
+        `Hi ${user.username},\n\n
+        Please use this link to reset your password: https://api.whatado.io/change-password/${tempToken}\n\n
+        It's valid for the next 15 minutes.\n\nThanks,\nWhatado Support`,
+        `<b>reset password</b>
+        <a href="https://api.whatado.io/change-password/${tempToken}">
+        https://api.whatado.io/change-password/${tempToken}
+        </a>`
       );
       return { ok: true };
     } catch (e) {

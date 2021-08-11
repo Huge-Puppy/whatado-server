@@ -29,13 +29,13 @@ export class Chat extends BaseEntity {
 
   @Field()
   @Column({default: ""})
-  text!: string;
+  text: string;
 
   @Field(() => User)
-  @ManyToOne(() => User)
+  @ManyToOne(() => User, {onDelete: "SET NULL"})
   author: User;
 
   @Field(() => Forum)
-  @OneToMany(() => Forum, forum => forum.chats)
+  @OneToMany(() => Forum, forum => forum.chats, {onDelete: "CASCADE"})
   forum: Forum;
 }

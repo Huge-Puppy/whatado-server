@@ -1,7 +1,7 @@
 import { Chat } from "../entities/Chat";
 import { Arg, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
 import { BaseEntity } from "typeorm";
-import { ChatApiResponse, ChatsApiResponse } from "./outputs/chatOutputs";
+import { ChatApiResponse, ChatsApiResponse } from "./outputs/modelOutputs";
 import { ChatFilterInput, ChatInput } from "./inputs/chatInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";

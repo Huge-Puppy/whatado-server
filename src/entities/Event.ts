@@ -7,9 +7,10 @@ import {
   BaseEntity,
   ManyToMany,
   JoinTable,
-  OneToMany,
   OneToOne,
   JoinColumn,
+  ManyToOne,
+  RelationId,
 } from "typeorm";
 import { Field, Float, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
@@ -53,22 +54,32 @@ export class Event extends BaseEntity {
   description!: string;
 
   @Field(() => User)
-  @OneToMany(() => User, (user) => user.myEvents)
+  @ManyToOne(() => User, (user) => user.myEvents, { cascade: true })
   creator: User;
+  @RelationId((event: Event) => event.creator)
+  creatorId: number;
 
   @Field(() => [User])
-  @ManyToMany(() => User)
+  @ManyToMany(() => User, {
+    onDelete: "SET NULL",
+    cascade: ["update", "insert"],
+  })
   @JoinTable()
   wannago: User[];
 
-
   @Field(() => [Interest])
-  @ManyToMany(() => Interest, interest => interest.relatedEvents, { eager: true, cascade: ["update"] })
+  @ManyToMany(() => Interest, (interest) => interest.relatedEvents, {
+    cascade: ["update", "insert"],
+    onDelete: "SET NULL",
+  })
   @JoinTable()
   relatedInterests: Interest[];
 
   @Field(() => Forum)
-  @OneToOne(() => Forum, (forum) => forum.event)
+  @OneToOne(() => Forum, (forum) => forum.event, {
+    onDelete: "SET NULL",
+    cascade: ["insert", "update"],
+  })
   @JoinColumn()
   forum: Forum;
 

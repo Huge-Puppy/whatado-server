@@ -1,4 +1,12 @@
-import { Arg, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
+import {
+  Arg,
+  FieldResolver,
+  Mutation,
+  Query,
+  Resolver,
+  Root,
+  UseMiddleware,
+} from "type-graphql";
 import { BaseEntity } from "typeorm";
 import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
@@ -6,10 +14,11 @@ import { Interest } from "../entities/Interest";
 import {
   InterestApiResponse,
   InterestsApiResponse,
-} from "./outputs/interestOutputs";
+} from "./outputs/modelOutputs";
 import { InterestFilterInput, InterestInput } from "./inputs/interestInputs";
+import { User } from "../entities/User";
 
-@Resolver()
+@Resolver(() => Interest)
 export class InterestResolver extends BaseEntity {
   @Query(() => InterestApiResponse)
   @UseMiddleware(isAuth)
@@ -102,12 +111,18 @@ export class InterestResolver extends BaseEntity {
     @Arg("options") options: InterestFilterInput
   ): Promise<BoolApiResponse> {
     try {
-      const peopleInterested = options.peopleInterestedIds != null ? options.peopleInterestedIds.map((id) => ({
-        id: id,
-      })) : undefined;
-      const relatedEvents = options.relatedEventsIds != null ? options.relatedEventsIds.map((id) => ({
-        id: id,
-      })) : undefined;
+      const peopleInterested =
+        options.peopleInterestedIds != null
+          ? options.peopleInterestedIds.map((id) => ({
+              id: id,
+            }))
+          : undefined;
+      const relatedEvents =
+        options.relatedEventsIds != null
+          ? options.relatedEventsIds.map((id) => ({
+              id: id,
+            }))
+          : undefined;
       await Interest.update(
         { id: options.id },
         {
@@ -129,5 +144,12 @@ export class InterestResolver extends BaseEntity {
         ],
       };
     }
+  }
+
+  @FieldResolver()
+  async relatedEvents(@Root() interest: Interest) {
+    return await User.find({
+      where: { relatedInterests: { id: interest.id } },
+    });
   }
 }
