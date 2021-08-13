@@ -3,8 +3,12 @@ import {
   Arg,
   Ctx,
   Mutation,
+  PubSub,
+  PubSubEngine,
   Query,
   Resolver,
+  Root,
+  Subscription,
   UseMiddleware,
 } from "type-graphql";
 import { User } from "../entities/User";
@@ -107,13 +111,34 @@ export class UserResolver {
     }
   }
 
-  @Query(() => UserApiResponse, { nullable: true })
+  @Subscription(() => String, { topics: "HELLO" })
+  me(@Root() username: String): String {
+    console.log('jcl me', username);
+    return username;
+  }
+
+  @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  me(@Ctx() { payload }: MyContext) {
+  async changeUsername(
+    @Ctx() { payload }: MyContext,
+    @Arg("username") username: string,
+    @PubSub() pubSub: PubSubEngine
+  ): Promise<BoolApiResponse> {
     if (!payload) {
-      return null;
+      return {
+        ok: false,
+        errors: [{ message: "uh oh" }],
+      };
     }
-    return { nodes: User.findOne(payload.userId) };
+    const user = await User.findOneOrFail(payload.userId);
+    user.username = username;
+    user.save();
+    await pubSub.publish("HELLO", username);
+
+    return {
+      ok: true,
+      nodes: true,
+    };
   }
 
   @Mutation(() => BoolApiResponse)
