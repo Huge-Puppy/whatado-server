@@ -1,5 +1,12 @@
 import { Forum } from "../entities/Forum";
-import { Arg, Int, Query, Resolver, UseMiddleware } from "type-graphql";
+import {
+  Arg,
+  Int,
+  Mutation,
+  Query,
+  Resolver,
+  UseMiddleware,
+} from "type-graphql";
 import { BaseEntity } from "typeorm";
 import { ForumApiResponse, ForumsApiResponse } from "./outputs/modelOutputs";
 import { isAuth } from "../middleware/isAuth";
@@ -28,13 +35,36 @@ export class ForumResolver extends BaseEntity {
     @Arg("ids", () => Int) ids: number[]
   ): Promise<ForumsApiResponse> {
     try {
-      const forums = await Forum.findByIds(ids, {relations: ["userNotifications"]});
+      const forums = await Forum.findByIds(ids, {
+        relations: ["userNotifications"],
+      });
       return { nodes: forums };
     } catch (e) {
       return {
         ok: false,
         errors: [
           { field: "forum", message: `error retrieving forums: ${e.message}` },
+        ],
+      };
+    }
+  }
+
+  @Mutation(() => ForumApiResponse)
+  @UseMiddleware(isAuth)
+  async createForum(
+    @Arg("eventId", () => Int) eventId: number
+  ): Promise<ForumApiResponse> {
+    try {
+      const forum = await Forum.create({ chats: [], event: { id: eventId } });
+      return {
+        nodes: forum,
+        ok: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          { field: "forum", message: `error creating forum: ${e.message}` },
         ],
       };
     }
