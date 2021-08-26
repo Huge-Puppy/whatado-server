@@ -15,13 +15,15 @@ import { createAccessToken, createRefreshToken } from "./auth";
 import { InterestResolver } from "./resolvers/interest";
 import { ChatResolver } from "./resolvers/chat";
 import { ForumResolver } from "./resolvers/forum";
-import { createUserLoader } from "./resolvers/loaders/creatorLoader";
+import { createUserLoader } from "./resolvers/loaders/userLoader";
 import { createInterestLoader } from "./resolvers/loaders/interestLoader";
 import { RedisPubSub } from "graphql-redis-subscriptions";
 import Redis from "ioredis";
 import { createServer } from "http";
 import { execute, subscribe } from "graphql";
 import { SubscriptionServer } from "subscriptions-transport-ws";
+import { createChatNotificationLoader } from "./resolvers/loaders/chatNotificationLoader";
+import { createEventLoader } from "./resolvers/loaders/eventLoader";
 // import WebSocket from "ws";
 
 const main = async () => {
@@ -57,10 +59,6 @@ const main = async () => {
         refreshToken: createRefreshToken(user),
       });
     } else {
-      User.update(
-        { id: user.id },
-        { refreshCount: user.refreshCount ?? 0 + 1 }
-      );
       return res.send({ ok: false, accessToken: null, refreshToken: null });
     }
   });
@@ -95,6 +93,8 @@ const main = async () => {
       res,
       userLoader: createUserLoader(),
       interestLoader: createInterestLoader(),
+      chatNotificationLoader: createChatNotificationLoader(),
+      eventLoader: createEventLoader(),
     }),
   });
 
@@ -106,11 +106,10 @@ const main = async () => {
       schema,
       execute,
       subscribe,
-      async onConnect(
-        // connectionParams: Object,
-        // webSocket: WebSocket,
-        // context: MyContext
-      ) {},
+      async onConnect() // connectionParams: Object,
+      // webSocket: WebSocket,
+      // context: MyContext
+      {},
     },
     {
       server: httpServer,

@@ -2,6 +2,7 @@ import { MyContext } from "../types";
 import {
   Arg,
   Ctx,
+  FieldResolver,
   Mutation,
   PubSub,
   PubSubEngine,
@@ -20,8 +21,27 @@ import { UserInput } from "./inputs/userInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { createAccessToken, createRefreshToken } from "../auth";
 
-@Resolver()
+@Resolver(() => User)
 export class UserResolver {
+  @Query(() => UserApiResponse)
+  @UseMiddleware(isAuth)
+  async me(@Ctx() { payload }: MyContext): Promise<UserApiResponse> {
+    try {
+      const user = await User.findOneOrFail(payload?.userId, {
+        relations: ["interests", "chatNotifications", "myEvents"],
+      });
+      return {
+        nodes: user,
+        ok: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "User", message: e.message }],
+      };
+    }
+  }
+
   @Query(() => UsersApiResponse)
   @UseMiddleware(isAuth)
   async users(): Promise<UsersApiResponse> {
@@ -31,7 +51,7 @@ export class UserResolver {
     } catch (e) {
       return {
         ok: false,
-        errors: [{ message: e.message }],
+        errors: [{ field: "Users", message: e.message }],
       };
     }
   }
@@ -112,8 +132,8 @@ export class UserResolver {
   }
 
   @Subscription(() => String, { topics: "HELLO" })
-  me(@Root() username: String): String {
-    console.log('jcl me', username);
+  me_sub(@Root() username: String): String {
+    console.log("jcl me", username);
     return username;
   }
 
@@ -174,5 +194,23 @@ export class UserResolver {
         ],
       };
     }
+  }
+  @FieldResolver()
+  interests(@Root() user: User, @Ctx() { interestLoader }: MyContext) {
+    return interestLoader.loadMany(
+      user.interests.map((interest) => interest.id)
+    );
+  }
+  @FieldResolver()
+  chatNotifications(@Root() user: User, @Ctx() { chatNotificationLoader }: MyContext) {
+    return chatNotificationLoader.loadMany(
+      user.chatNotifications.map((cn) => cn.id)
+    );
+  }
+  @FieldResolver()
+  myEvents(@Root() user: User, @Ctx() { eventLoader }: MyContext) {
+    return eventLoader.loadMany(
+      user.myEvents.map((event) => event.id)
+    );
   }
 }
