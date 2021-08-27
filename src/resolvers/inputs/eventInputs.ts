@@ -18,6 +18,10 @@ export class EventInput implements Partial<Event>{
   location: string;
   @Field(() => [Int] )
   relatedInterestsIds: number[];
+  @Field(() => [Int] )
+  invitedIds: number[];
+  @Field(() => [Int] )
+  wannagoIds: number[];
   @Field()
   filterLocation: string;
   @Field(() => Float)
@@ -60,6 +64,8 @@ export class EventFilterInput implements Partial<Event>{
   creatorId?: number;
   @Field(() => [Int], { nullable: true })
   wannagoIds?: number[];
+  @Field(() => [Int], { nullable: true })
+  invitedIds?: number[];
   @Field(() => Int, { nullable: true })
   forumId?: number;
   @Field(() => [Int], { nullable: true })

@@ -16,6 +16,7 @@ import { isAuth } from "../middleware/isAuth";
 import { Forum } from "../entities/Forum";
 import { User } from "../entities/User";
 import { MyContext } from "../types";
+import { Any } from "typeorm";
 
 @Resolver(() => Event)
 export class EventResolver {
@@ -24,11 +25,36 @@ export class EventResolver {
   async events(): Promise<EventsApiResponse> {
     try {
       const events = await Event.find({
-        relations: ["relatedInterests", "creator"],
+        relations: ["relatedInterests", "creator", "wannago", "invited"],
       });
       return { ok: true, nodes: events };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
+    }
+  }
+
+  @Query(() => EventsApiResponse)
+  @UseMiddleware(isAuth)
+  async myEvents(@Ctx() { payload }: MyContext): Promise<EventsApiResponse> {
+    try {
+       const events = await Event.createQueryBuilder("Event")
+         .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
+         .leftJoinAndSelect("Event.creator", "Event__creator")
+         .leftJoinAndSelect("Event.wannago", "Event__wannago")
+         .leftJoinAndSelect("Event.invited", "Event__invited")
+         .relation("relatedInterests")
+         .relation("creator")
+         .relation("wannago")
+         .relation("invited").select()
+             .where("Event__invited.id = :invitedId", {invitedId: payload!.userId})
+             .orWhere("Event__creator.id = :creatorId", {creatorId: payload!.userId})
+       .getMany();
+      return { ok: true, nodes: events };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "myevent server", message: e.message }],
+      };
     }
   }
 
@@ -62,6 +88,7 @@ export class EventResolver {
         filterRadius: options.filterRadius,
         creator: { id: options.creatorId },
         wannago: [],
+        invited: [],
         relatedInterests,
         forum: forum,
       }).save();
@@ -74,15 +101,15 @@ export class EventResolver {
     }
   }
 
-  @Mutation(() => BoolApiResponse)
+  @Mutation(() => EventApiResponse)
   @UseMiddleware(isAuth)
   async updateEvent(
     @Arg("options") options: EventInput
-  ): Promise<BoolApiResponse> {
+  ): Promise<EventApiResponse> {
     try {
       // should create new interests with client call before updating event
       const event = await Event.findOneOrFail(options.id, {
-        relations: ["creator", "relatedInterests"],
+        relations: ["creator", "relatedInterests", "wannago", "invited"],
       });
       event.title = options.title;
       event.description = options.description;
@@ -98,8 +125,12 @@ export class EventResolver {
         (id) => ({ id } as any)
       );
       event.relatedInterests = relatedInterests;
-      await event.save();
-      return { ok: true, nodes: true };
+      const wannago = options.wannagoIds.map((id) => ({ id } as any));
+      event.wannago = wannago;
+      const invited = options.invitedIds.map((id) => ({ id } as any));
+      event.invited = invited;
+      const newEvent = await event.save();
+      return { ok: true, nodes: newEvent };
     } catch (e) {
       return {
         ok: false,
@@ -131,6 +162,18 @@ export class EventResolver {
   ): Promise<User> {
     return userLoader.load(event.creatorId);
   }
+  @FieldResolver()
+  async wannago(@Root() event: Event, @Ctx() { userLoader }: MyContext) {
+    if (event.wannago == null) return [];
+    return userLoader.loadMany(event.wannago.map((user) => user.id));
+  }
+
+  @FieldResolver()
+  async invited(@Root() event: Event, @Ctx() { userLoader }: MyContext) {
+    if (event.invited == null) return [];
+    return userLoader.loadMany(event.invited.map((user) => user.id));
+  }
+
   @FieldResolver()
   relatedInterests(@Root() event: Event, @Ctx() { interestLoader }: MyContext) {
     return interestLoader.loadMany(
