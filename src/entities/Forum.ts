@@ -4,9 +4,9 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   BaseEntity,
-  ManyToOne,
   OneToOne,
   OneToMany,
+  // Column,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { Chat } from "./Chat";
@@ -36,7 +36,7 @@ export class Forum extends BaseEntity {
   userNotifications: ChatNotification[];
 
   @Field(() => [Chat])
-  @ManyToOne(() => Chat, (chat) => chat.forum, {
+  @OneToMany(() => Chat, (chat) => chat.forum, {
     cascade: ["insert"],
     onDelete: "SET NULL",
   })
@@ -48,4 +48,8 @@ export class Forum extends BaseEntity {
     cascade: ["update", "insert"],
   })
   event: Event;
+
+  // @Field(() => Int)
+  // @Column({type: "int"})
+  // eventId: number;
 }

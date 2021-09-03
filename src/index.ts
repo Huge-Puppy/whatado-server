@@ -24,11 +24,23 @@ import { execute, subscribe } from "graphql";
 import { SubscriptionServer } from "subscriptions-transport-ws";
 import { createChatNotificationLoader } from "./resolvers/loaders/chatNotificationLoader";
 import { createEventLoader } from "./resolvers/loaders/eventLoader";
+import { createChatLoader } from "./resolvers/loaders/chatLoader";
+import { createForumLoader } from "./resolvers/loaders/forumLoader";
+// import { Chat } from "./entities/Chat";
+// import { Event } from "./entities/Event";
+// import { Forum } from "./entities/Forum";
 // import WebSocket from "ws";
 
 const main = async () => {
   await createConnection();
   const app = express();
+
+  // const chats = await Chat.find();
+  // Chat.remove(chats);
+  // const events = await Event.find();
+  // Event.remove(events);
+  // const forums = await Forum.find();
+  // Forum.remove(forums);
 
   app.get("/get_schema", async (_, res) => {
     return res.download(`${__dirname}/schema.graphql`, "schema.graphql");
@@ -95,6 +107,8 @@ const main = async () => {
       interestLoader: createInterestLoader(),
       chatNotificationLoader: createChatNotificationLoader(),
       eventLoader: createEventLoader(),
+      chatLoader: createChatLoader(),
+      forumLoader: createForumLoader(),
     }),
   });
 

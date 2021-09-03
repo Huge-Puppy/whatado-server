@@ -1,12 +1,26 @@
 import { Chat } from "../entities/Chat";
-import { Arg, Mutation, Query, Resolver, UseMiddleware } from "type-graphql";
+import {
+  Arg,
+  Ctx,
+  FieldResolver,
+  Int,
+  Mutation,
+  PubSub,
+  PubSubEngine,
+  Query,
+  Resolver,
+  Root,
+  Subscription,
+  UseMiddleware,
+} from "type-graphql";
 import { BaseEntity } from "typeorm";
 import { ChatApiResponse, ChatsApiResponse } from "./outputs/modelOutputs";
 import { ChatFilterInput, ChatInput } from "./inputs/chatInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
+import { MyContext } from "src/types";
 
-@Resolver()
+@Resolver(() => Chat)
 export class ChatResolver extends BaseEntity {
   @Query(() => ChatApiResponse)
   @UseMiddleware(isAuth)
@@ -24,14 +38,64 @@ export class ChatResolver extends BaseEntity {
     }
   }
 
+  @Query(() => ChatApiResponse)
+  @UseMiddleware(isAuth)
+  async lastChat(
+    @Arg("forumId", () => Int) forumId: number
+  ): Promise<ChatApiResponse> {
+    try {
+      const chat = await Chat.createQueryBuilder("Chat")
+        .leftJoinAndSelect("Chat.author", "Chat__author")
+        .leftJoinAndSelect("Chat.forum", "Chat__forum")
+        .relation("author")
+        .relation("forum")
+        .select()
+        .where("Chat__forum.id = :forumId", { forumId })
+        .orderBy("Chat.createdAt", "DESC")
+        .getOne();
+
+      console.log(chat);
+      return { ok: true, nodes: chat };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          { field: "chat", message: `error finding chat: ${e.message}` },
+        ],
+      };
+    }
+  }
+
+  @Subscription(() => Chat, {
+    // topics: ({args, payload, context }) => {
+      // console.log(payload);
+      // console.log(args);
+      // console.log(context);
+      // return "HELLO";
+    // },
+    topics: "CHAT"
+  })
+  chatSubscription(@Root() chat: Chat): Chat {
+    console.log('new event');
+    return chat;
+  }
+
   @Query(() => ChatsApiResponse)
   @UseMiddleware(isAuth)
   async chats(
-    @Arg("options") options: ChatFilterInput
+    @Arg("forumId", () => Int) forumId: number
   ): Promise<ChatsApiResponse> {
-    let chats;
     try {
-      chats = await Chat.find({ where: { ...options } });
+      const chats = await Chat.createQueryBuilder("Chat")
+        .leftJoinAndSelect("Chat.author", "Chat__author")
+        .leftJoinAndSelect("Chat.forum", "Chat__forum")
+        .relation("author")
+        .relation("forum")
+        .select()
+        .where("Chat__forum.id = :forumId", { forumId })
+        .orderBy("Chat.createdAt", "DESC")
+        .getMany();
+      return { ok: true, nodes: chats };
     } catch (e) {
       return {
         ok: false,
@@ -40,21 +104,24 @@ export class ChatResolver extends BaseEntity {
         ],
       };
     }
-    return { nodes: chats };
   }
 
   @Mutation(() => ChatApiResponse)
   @UseMiddleware(isAuth)
   async createChat(
-    @Arg("options") options: ChatInput
+    @Arg("options") options: ChatInput,
+    @PubSub() pubSub: PubSubEngine
   ): Promise<ChatApiResponse> {
-    let chat;
     try {
-      chat = await Chat.create({
+      const chat = await Chat.create({
         text: options.text,
         author: { id: options.authorId },
-        forum: { id: options.forumId } as any,
+        forum: { id: options.forumId },
       }).save();
+      
+      await pubSub.publish("CHAT", chat);
+      console.log('sent chat');
+      return { nodes: chat };
     } catch (e) {
       return {
         ok: false,
@@ -63,7 +130,6 @@ export class ChatResolver extends BaseEntity {
         ],
       };
     }
-    return { nodes: chat };
   }
 
   @Mutation(() => BoolApiResponse)
@@ -93,5 +159,17 @@ export class ChatResolver extends BaseEntity {
         ],
       };
     }
+  }
+
+  @FieldResolver()
+  async author(@Root() chat: Chat, @Ctx() { userLoader }: MyContext) {
+    if (chat.author == null) return [];
+    return userLoader.load(chat.author.id);
+  }
+
+  @FieldResolver()
+  async forum(@Root() chat: Chat, @Ctx() { forumLoader }: MyContext) {
+    if (chat.forum == null) return [];
+    return forumLoader.load(chat.author.id);
   }
 }

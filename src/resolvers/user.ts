@@ -3,6 +3,7 @@ import {
   Arg,
   Ctx,
   FieldResolver,
+  Int,
   Mutation,
   PubSub,
   PubSubEngine,
@@ -55,6 +56,23 @@ export class UserResolver {
       };
     }
   }
+
+  @Query(() => UsersApiResponse)
+  @UseMiddleware(isAuth)
+  async usersById(
+    @Arg("ids", () => [Int]) ids: number[]
+  ): Promise<UsersApiResponse> {
+    try {
+      const users = await User.findByIds(ids);
+      return { ok: true, nodes: users };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Users", message: e.message }],
+      };
+    }
+  }
+
   @Mutation(() => UserApiResponse)
   async register(@Arg("options") options: UserInput): Promise<UserApiResponse> {
     if (!options.email?.includes("@")) {
@@ -202,15 +220,16 @@ export class UserResolver {
     );
   }
   @FieldResolver()
-  chatNotifications(@Root() user: User, @Ctx() { chatNotificationLoader }: MyContext) {
+  chatNotifications(
+    @Root() user: User,
+    @Ctx() { chatNotificationLoader }: MyContext
+  ) {
     return chatNotificationLoader.loadMany(
       user.chatNotifications.map((cn) => cn.id)
     );
   }
   @FieldResolver()
   myEvents(@Root() user: User, @Ctx() { eventLoader }: MyContext) {
-    return eventLoader.loadMany(
-      user.myEvents.map((event) => event.id)
-    );
+    return eventLoader.loadMany(user.myEvents.map((event) => event.id));
   }
 }

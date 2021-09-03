@@ -7,8 +7,8 @@ import { Interest } from '../../entities/Interest';
 export const createInterestLoader = () => new DataLoader<number, Interest>(async interestIds => {
     const interests = await Interest.findByIds(interestIds as number[]);
     const interestIdToInterest: Record<number, Interest> = {};
-    interests.forEach(id => {
-        interestIdToInterest[id.id] = id;
+    interests.forEach(interest => {
+        interestIdToInterest[interest.id] = interest;
     });
 
     return interestIds.map(interestId => interestIdToInterest[interestId]);

@@ -6,7 +6,6 @@ import {
   UpdateDateColumn,
   BaseEntity,
   ManyToOne,
-  OneToMany,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
@@ -36,6 +35,6 @@ export class Chat extends BaseEntity {
   author: User;
 
   @Field(() => Forum)
-  @OneToMany(() => Forum, forum => forum.chats, {onDelete: "CASCADE"})
+  @ManyToOne(() => Forum, forum => forum.chats, {onDelete: "CASCADE"})
   forum: Forum;
 }

@@ -16,7 +16,7 @@ import { isAuth } from "../middleware/isAuth";
 import { Forum } from "../entities/Forum";
 import { User } from "../entities/User";
 import { MyContext } from "../types";
-import { Any } from "typeorm";
+import { ChatNotification } from "../entities/ChatNotification";
 
 @Resolver(() => Event)
 export class EventResolver {
@@ -37,18 +37,21 @@ export class EventResolver {
   @UseMiddleware(isAuth)
   async myEvents(@Ctx() { payload }: MyContext): Promise<EventsApiResponse> {
     try {
-       const events = await Event.createQueryBuilder("Event")
-         .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
-         .leftJoinAndSelect("Event.creator", "Event__creator")
-         .leftJoinAndSelect("Event.wannago", "Event__wannago")
-         .leftJoinAndSelect("Event.invited", "Event__invited")
-         .relation("relatedInterests")
-         .relation("creator")
-         .relation("wannago")
-         .relation("invited").select()
-             .where("Event__invited.id = :invitedId", {invitedId: payload!.userId})
-             .orWhere("Event__creator.id = :creatorId", {creatorId: payload!.userId})
-       .getMany();
+      const events = await Event.createQueryBuilder("Event")
+        .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
+        .leftJoinAndSelect("Event.creator", "Event__creator")
+        .leftJoinAndSelect("Event.wannago", "Event__wannago")
+        .leftJoinAndSelect("Event.invited", "Event__invited")
+        .relation("relatedInterests")
+        .relation("creator")
+        .relation("wannago")
+        .relation("invited")
+        .select()
+        .where("Event__invited.id = :invitedId", { invitedId: payload!.userId })
+        .orWhere("Event__creator.id = :creatorId", {
+          creatorId: payload!.userId,
+        })
+        .getMany();
       return { ok: true, nodes: events };
     } catch (e) {
       return {
@@ -67,10 +70,16 @@ export class EventResolver {
   @Mutation(() => EventApiResponse)
   @UseMiddleware(isAuth)
   async createEvent(
-    @Arg("options") options: EventInput
+    @Arg("options") options: EventInput,
+    @Ctx() { payload }: MyContext
   ): Promise<EventApiResponse> {
     try {
+      const cn = await ChatNotification.create({
+        user: { id: payload!.userId as any },
+        notifications: 0,
+      }).save();
       const forum = await Forum.create({
+        userNotifications: [cn],
         chats: [],
       }).save();
       const relatedInterests = options.relatedInterestsIds.map((id) => ({

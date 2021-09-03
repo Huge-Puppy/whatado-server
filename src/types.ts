@@ -4,6 +4,8 @@ import { createUserLoader } from "./resolvers/loaders/userLoader";
 import { createInterestLoader } from "./resolvers/loaders/interestLoader";
 import { createChatNotificationLoader } from "./resolvers/loaders/chatNotificationLoader";
 import { createEventLoader } from "./resolvers/loaders/eventLoader";
+import { createChatLoader } from "./resolvers/loaders/chatLoader";
+import { createForumLoader } from "./resolvers/loaders/forumLoader";
 
 export type MyContext = {
   req: Request;
@@ -13,6 +15,8 @@ export type MyContext = {
   interestLoader: ReturnType<typeof createInterestLoader>;
   chatNotificationLoader: ReturnType<typeof createChatNotificationLoader>;
   eventLoader: ReturnType<typeof createEventLoader>;
+  chatLoader: ReturnType<typeof createChatLoader>;
+  forumLoader: ReturnType<typeof createForumLoader>;
 };
 
 export enum Gender {
