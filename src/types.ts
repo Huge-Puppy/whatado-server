@@ -17,6 +17,7 @@ export type MyContext = {
   eventLoader: ReturnType<typeof createEventLoader>;
   chatLoader: ReturnType<typeof createChatLoader>;
   forumLoader: ReturnType<typeof createForumLoader>;
+  isDataLoaderAttached: Boolean;
 };
 
 export enum Gender {

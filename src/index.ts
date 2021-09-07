@@ -26,10 +26,10 @@ import { createChatNotificationLoader } from "./resolvers/loaders/chatNotificati
 import { createEventLoader } from "./resolvers/loaders/eventLoader";
 import { createChatLoader } from "./resolvers/loaders/chatLoader";
 import { createForumLoader } from "./resolvers/loaders/forumLoader";
+// import WebSocket from "ws";
 // import { Chat } from "./entities/Chat";
 // import { Event } from "./entities/Event";
 // import { Forum } from "./entities/Forum";
-// import WebSocket from "ws";
 
 const main = async () => {
   await createConnection();
@@ -109,6 +109,7 @@ const main = async () => {
       eventLoader: createEventLoader(),
       chatLoader: createChatLoader(),
       forumLoader: createForumLoader(),
+      isDataLoaderAttached: true,
     }),
   });
 
@@ -120,12 +121,16 @@ const main = async () => {
       schema,
       execute,
       subscribe,
-      async onConnect() // connectionParams: Object,
-      // webSocket: WebSocket,
-      // context: MyContext
-      {},
-    },
+      async onConnect(
+        // connectionParams: Object,
+        // webSocket: WebSocket,
+        context: MyContext
+      ) {
+        return context;
+      },
+    },  
     {
+
       server: httpServer,
       path: apolloServer.graphqlPath,
     }

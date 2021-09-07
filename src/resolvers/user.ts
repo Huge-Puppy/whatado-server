@@ -57,6 +57,20 @@ export class UserResolver {
     }
   }
 
+  @Query(() => UserApiResponse)
+  @UseMiddleware(isAuth)
+  async user(@Arg("id", () => Int) id: number): Promise<UserApiResponse> {
+    try {
+      const user = await User.findOneOrFail({ id });
+      return { ok: true, nodes: user };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "User", message: e.message }],
+      };
+    }
+  }
+
   @Query(() => UsersApiResponse)
   @UseMiddleware(isAuth)
   async usersById(

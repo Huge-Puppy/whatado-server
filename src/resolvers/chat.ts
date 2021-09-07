@@ -1,4 +1,6 @@
 import { Chat } from "../entities/Chat";
+import { Forum } from "../entities/Forum";
+import { User } from "../entities/User";
 import {
   Arg,
   Ctx,
@@ -18,7 +20,8 @@ import { ChatApiResponse, ChatsApiResponse } from "./outputs/modelOutputs";
 import { ChatFilterInput, ChatInput } from "./inputs/chatInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
-import { MyContext } from "src/types";
+import { MyContext } from "../types";
+import { hasLoader } from "../middleware/hasLoader";
 
 @Resolver(() => Chat)
 export class ChatResolver extends BaseEntity {
@@ -54,7 +57,6 @@ export class ChatResolver extends BaseEntity {
         .orderBy("Chat.createdAt", "DESC")
         .getOne();
 
-      console.log(chat);
       return { ok: true, nodes: chat };
     } catch (e) {
       return {
@@ -64,20 +66,6 @@ export class ChatResolver extends BaseEntity {
         ],
       };
     }
-  }
-
-  @Subscription(() => Chat, {
-    // topics: ({args, payload, context }) => {
-      // console.log(payload);
-      // console.log(args);
-      // console.log(context);
-      // return "HELLO";
-    // },
-    topics: "CHAT"
-  })
-  chatSubscription(@Root() chat: Chat): Chat {
-    console.log('new event');
-    return chat;
   }
 
   @Query(() => ChatsApiResponse)
@@ -106,6 +94,21 @@ export class ChatResolver extends BaseEntity {
     }
   }
 
+  @Subscription(() => Chat, {
+    // topics: ({args, payload, context }) => {
+    // console.log(payload);
+    // console.log(args);
+    // console.log(context);
+    // return "HELLO";
+    // },
+    topics: "CHAT",
+  })
+  @UseMiddleware(hasLoader)
+  async chatSubscription(@Root() chat: Chat): Promise<Chat> {
+    chat.createdAt = new Date(chat.createdAt);
+    return chat;
+  }
+
   @Mutation(() => ChatApiResponse)
   @UseMiddleware(isAuth)
   async createChat(
@@ -113,14 +116,17 @@ export class ChatResolver extends BaseEntity {
     @PubSub() pubSub: PubSubEngine
   ): Promise<ChatApiResponse> {
     try {
+      const forum = await Forum.findOneOrFail({ id: options.forumId });
+      const author = await User.findOneOrFail({ id: options.authorId });
       const chat = await Chat.create({
         text: options.text,
-        author: { id: options.authorId },
-        forum: { id: options.forumId },
+        author,
+        forum,
       }).save();
-      
+
+      console.log("before", chat);
+
       await pubSub.publish("CHAT", chat);
-      console.log('sent chat');
       return { nodes: chat };
     } catch (e) {
       return {
