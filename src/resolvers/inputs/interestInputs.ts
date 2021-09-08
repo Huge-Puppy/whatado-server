@@ -10,7 +10,7 @@ export class InterestInput implements Partial<Interest>{
   title: string;
 
   @Field()
-  description: string;
+  popular: boolean;
 
   @Field(() => [Int])
   peopleInterestedIds: number[];
@@ -34,7 +34,7 @@ export class InterestFilterInput implements Partial<Interest>{
   title?: string;
 
   @Field({nullable: true})
-  description?: string;
+  popular?: boolean;
 
   @Field(() => [Int], {nullable: true})
   peopleInterestedIds?: number[];

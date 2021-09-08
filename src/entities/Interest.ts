@@ -27,12 +27,12 @@ export class Interest extends BaseEntity {
   updatedAt = new Date();
 
   @Field()
-  @Column({ default: "" })
+  @Column({ unique: true })
   title!: string;
 
   @Field()
-  @Column({ default: "" })
-  description!: string;
+  @Column({ default: false })
+  popular: boolean;
 
   @Field(() => [User])
   @ManyToMany(() => User, (user) => user.interests, {

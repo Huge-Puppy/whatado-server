@@ -17,10 +17,16 @@ import { User } from "../entities/User";
 import argon2 from "argon2";
 import { sendEmail } from "../utils/sendEmail";
 import { isAuth } from "../middleware/isAuth";
-import { UserApiResponse, UsersApiResponse } from "./outputs/modelOutputs";
+import {
+  InterestsApiResponse,
+  UserApiResponse,
+  UsersApiResponse,
+} from "./outputs/modelOutputs";
 import { UserInput } from "./inputs/userInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { createAccessToken, createRefreshToken } from "../auth";
+import { Interest } from "../entities/Interest";
+import { In } from "typeorm";
 
 @Resolver(() => User)
 export class UserResolver {
@@ -67,6 +73,55 @@ export class UserResolver {
       return {
         ok: false,
         errors: [{ field: "User", message: e.message }],
+      };
+    }
+  }
+
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async addInterests(
+    @Arg("interestsText", () => [String]) interestsText: string[],
+    @Ctx() { payload }: MyContext
+  ): Promise<BoolApiResponse> {
+    try {
+      const oldInterests = await Interest.find({
+        where: { title: In(interestsText) },
+      });
+      const newInterestTitles = interestsText.filter(
+        (title) =>
+          !oldInterests.map((interest) => interest.title).includes(title)
+      );
+      // create new interests
+      const newInterests = await Interest.createQueryBuilder()
+        .insert()
+        .into(Interest)
+        .values(
+          newInterestTitles.map((title) => ({
+            title,
+          }))
+        )
+        .execute();
+
+      const user = await User.findOneOrFail(payload!.userId);
+      user.interests = [
+        ...oldInterests,
+        ...(newInterests.generatedMaps as Interest[]),
+      ];
+      await user.save();
+
+      return {
+        nodes: true,
+        ok: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "add interests",
+            message: e.toString,
+          },
+        ],
       };
     }
   }

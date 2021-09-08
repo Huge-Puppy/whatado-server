@@ -7,7 +7,7 @@ import {
   Root,
   UseMiddleware,
 } from "type-graphql";
-import { BaseEntity } from "typeorm";
+import { BaseEntity, Like } from "typeorm";
 import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
 import { Interest } from "../entities/Interest";
@@ -41,12 +41,17 @@ export class InterestResolver extends BaseEntity {
 
   @Query(() => InterestsApiResponse)
   @UseMiddleware(isAuth)
-  async interests(
-    @Arg("options") options: InterestFilterInput
+  async searchInterests(
+    @Arg("partial") partial: String
   ): Promise<InterestsApiResponse> {
-    let interests;
     try {
-      interests = await Interest.find({ where: { ...options } });
+      const interests = await Interest.find({
+        take: 5,
+        where: {
+          title: Like(`%${partial}%`),
+        },
+      });
+      return { ok: true, nodes: interests };
     } catch (e) {
       return {
         ok: false,
@@ -58,7 +63,25 @@ export class InterestResolver extends BaseEntity {
         ],
       };
     }
-    return { nodes: interests };
+  }
+
+  @Query(() => InterestsApiResponse)
+  @UseMiddleware(isAuth)
+  async popularInterests(): Promise<InterestsApiResponse> {
+    try {
+      const interests = await Interest.find({ where: { popular: true } });
+      return { ok: true, nodes: interests };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "interest",
+            message: `error retrieving interests: ${e.message}`,
+          },
+        ],
+      };
+    }
   }
 
   @Mutation(() => InterestApiResponse)
@@ -76,7 +99,7 @@ export class InterestResolver extends BaseEntity {
     try {
       interest = await Interest.create({
         title: options.title,
-        description: options.description,
+        popular: options.popular,
         peopleInterested,
         relatedEvents,
       }).save();
@@ -127,7 +150,6 @@ export class InterestResolver extends BaseEntity {
         { id: options.id },
         {
           title: options.title,
-          description: options.description,
           peopleInterested,
           relatedEvents,
         }
