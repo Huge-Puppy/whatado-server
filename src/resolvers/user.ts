@@ -249,7 +249,6 @@ export class UserResolver {
   async updateBio(
     @Ctx() { payload }: MyContext,
     @Arg("bio") bio: string,
-    @PubSub() pubSub: PubSubEngine
   ): Promise<BoolApiResponse> {
     if (!payload) {
       return {
@@ -266,6 +265,51 @@ export class UserResolver {
       nodes: true,
     };
   }
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async updatePhotos(
+    @Ctx() { payload }: MyContext,
+    @Arg("urls", () => [String]) urls: string[],
+  ): Promise<BoolApiResponse> {
+    if (!payload) {
+      return {
+        ok: false,
+        errors: [{ message: "uh oh" }],
+      };
+    }
+    const user = await User.findOneOrFail(payload.userId);
+    user.photoUrls = JSON.stringify(urls);
+    user.save();
+
+    return {
+      ok: true,
+      nodes: true,
+    };
+  }
+
+
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async updateProfilePhoto(
+    @Ctx() { payload }: MyContext,
+    @Arg("url") url: string,
+  ): Promise<BoolApiResponse> {
+    if (!payload) {
+      return {
+        ok: false,
+        errors: [{ message: "uh oh" }],
+      };
+    }
+    const user = await User.findOneOrFail(payload.userId);
+    user.profilePhotoUrl = url;
+    user.save();
+
+    return {
+      ok: true,
+      nodes: true,
+    };
+  }
+
 
   @Mutation(() => BoolApiResponse)
   async forgotPassword(@Arg("email") email: string): Promise<BoolApiResponse> {

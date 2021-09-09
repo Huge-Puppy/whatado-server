@@ -53,6 +53,10 @@ export class User extends BaseEntity {
   profilePhotoUrl!: string;
 
   @Field()
+  @Column({ default: '[]' })
+  photoUrls!: string;
+
+  @Field()
   @Column({ default: "" })
   bio!: string;
 
