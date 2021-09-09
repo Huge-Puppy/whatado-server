@@ -17,11 +17,7 @@ import { User } from "../entities/User";
 import argon2 from "argon2";
 import { sendEmail } from "../utils/sendEmail";
 import { isAuth } from "../middleware/isAuth";
-import {
-  InterestsApiResponse,
-  UserApiResponse,
-  UsersApiResponse,
-} from "./outputs/modelOutputs";
+import { UserApiResponse, UsersApiResponse } from "./outputs/modelOutputs";
 import { UserInput } from "./inputs/userInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { createAccessToken, createRefreshToken } from "../auth";
@@ -241,6 +237,29 @@ export class UserResolver {
     user.username = username;
     user.save();
     await pubSub.publish("HELLO", username);
+
+    return {
+      ok: true,
+      nodes: true,
+    };
+  }
+
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async updateBio(
+    @Ctx() { payload }: MyContext,
+    @Arg("bio") bio: string,
+    @PubSub() pubSub: PubSubEngine
+  ): Promise<BoolApiResponse> {
+    if (!payload) {
+      return {
+        ok: false,
+        errors: [{ message: "uh oh" }],
+      };
+    }
+    const user = await User.findOneOrFail(payload.userId);
+    user.bio = bio;
+    user.save();
 
     return {
       ok: true,
