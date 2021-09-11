@@ -26,6 +26,7 @@ import { createChatNotificationLoader } from "./resolvers/loaders/chatNotificati
 import { createEventLoader } from "./resolvers/loaders/eventLoader";
 import { createChatLoader } from "./resolvers/loaders/chatLoader";
 import { createForumLoader } from "./resolvers/loaders/forumLoader";
+import { createWannagoLoader } from "./resolvers/loaders/wannagoLoader";
 // import WebSocket from "ws";
 // import { Chat } from "./entities/Chat";
 // import { Event } from "./entities/Event";
@@ -56,21 +57,20 @@ const main = async () => {
     let payload: any = null;
     try {
       payload = verify(token, process.env.REFRESH_TOKEN_SECRET!);
+      const user = await User.findOneOrFail({ id: payload.userId });
+      if (!user) {
+        return res.send({ ok: false, accessToken: "", refreshToken: "" });
+      }
+      if (payload.refreshCount === user.refreshCount) {
+        return res.send({
+          ok: true,
+          accessToken: createAccessToken(user),
+          refreshToken: createRefreshToken(user),
+        });
+      } else {
+        return res.send({ ok: false, accessToken: null, refreshToken: null });
+      }
     } catch (e) {
-      return res.send({ ok: false, accessToken: null, refreshToken: null });
-    }
-
-    const user = await User.findOneOrFail({ id: payload.userId });
-    if (!user) {
-      return res.send({ ok: false, accessToken: "", refreshToken: "" });
-    }
-    if (payload.refreshCount === user.refreshCount) {
-      return res.send({
-        ok: true,
-        accessToken: createAccessToken(user),
-        refreshToken: createRefreshToken(user),
-      });
-    } else {
       return res.send({ ok: false, accessToken: null, refreshToken: null });
     }
   });
@@ -109,6 +109,7 @@ const main = async () => {
       eventLoader: createEventLoader(),
       chatLoader: createChatLoader(),
       forumLoader: createForumLoader(),
+      wannagoLoader: createWannagoLoader(),
       isDataLoaderAttached: true,
     }),
   });
@@ -128,9 +129,8 @@ const main = async () => {
       ) {
         return context;
       },
-    },  
+    },
     {
-
       server: httpServer,
       path: apolloServer.graphqlPath,
     }

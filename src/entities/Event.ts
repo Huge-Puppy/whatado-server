@@ -11,12 +11,14 @@ import {
   JoinColumn,
   ManyToOne,
   RelationId,
+  OneToMany,
 } from "typeorm";
 import { Field, Float, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
 import { Interest } from "./Interest";
 import { Gender } from "../types";
 import { Forum } from "./Forum";
+import { Wannago } from "./Wannago";
 
 @ObjectType()
 @Entity()
@@ -41,7 +43,7 @@ export class Event extends BaseEntity {
   @Column({ default: "" })
   location!: string;
 
-  @Field({nullable: true})
+  @Field({ nullable: true })
   @Column({ nullable: true })
   pictureUrl?: string;
 
@@ -59,13 +61,11 @@ export class Event extends BaseEntity {
   @RelationId((event: Event) => event.creator)
   creatorId: number;
 
-  @Field(() => [User])
-  @ManyToMany(() => User, {
-    onDelete: "SET NULL",
+  @Field(() => [Wannago])
+  @OneToMany(() => Wannago, (wannago) => wannago.event, {
     cascade: ["update", "insert"],
   })
-  @JoinTable()
-  wannago: User[];
+  wannago: Wannago[];
 
   @Field(() => [User])
   @ManyToMany(() => User, {

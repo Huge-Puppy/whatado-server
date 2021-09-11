@@ -20,7 +20,7 @@ import { ChatNotification } from "../entities/ChatNotification";
 export class ForumResolver extends BaseEntity {
   @Query(() => ForumApiResponse)
   @UseMiddleware(isAuth)
-  async forum(@Arg("id") id: number): Promise<ForumApiResponse> {
+  async forum(@Arg("id", () => Int) id: number): Promise<ForumApiResponse> {
     try {
       const forum = await Forum.findOneOrFail(id);
       return { nodes: forum };

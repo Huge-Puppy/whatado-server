@@ -3,6 +3,7 @@ import {
   Arg,
   Ctx,
   FieldResolver,
+  Int,
   Mutation,
   Query,
   Resolver,
@@ -17,6 +18,8 @@ import { Forum } from "../entities/Forum";
 import { User } from "../entities/User";
 import { MyContext } from "../types";
 import { ChatNotification } from "../entities/ChatNotification";
+import { Wannago } from "../entities/Wannago";
+import { print } from "graphql";
 
 @Resolver(() => Event)
 export class EventResolver {
@@ -25,8 +28,15 @@ export class EventResolver {
   async events(): Promise<EventsApiResponse> {
     try {
       const events = await Event.find({
-        relations: ["relatedInterests", "creator", "wannago", "invited"],
+        relations: [
+          "relatedInterests",
+          "creator",
+          "wannago",
+          "wannago.user",
+          "invited",
+        ],
       });
+      console.log(events);
       return { ok: true, nodes: events };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
@@ -63,7 +73,7 @@ export class EventResolver {
 
   @Query(() => Event, { nullable: true })
   @UseMiddleware(isAuth)
-  async event(@Arg("id") id: number): Promise<EventApiResponse> {
+  async event(@Arg("id", () => Int) id: number): Promise<EventApiResponse> {
     return { ok: true, nodes: await Event.findOne(id) };
   }
 
@@ -118,7 +128,13 @@ export class EventResolver {
     try {
       // should create new interests with client call before updating event
       const event = await Event.findOneOrFail(options.id, {
-        relations: ["creator", "relatedInterests", "wannago", "invited"],
+        relations: [
+          "creator",
+          "relatedInterests",
+          "wannago",
+          "wannago.user",
+          "invited",
+        ],
       });
       event.title = options.title;
       event.description = options.description;
@@ -155,13 +171,94 @@ export class EventResolver {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async deleteEvent(@Arg("id") id: number): Promise<BoolApiResponse> {
+  async deleteEvent(@Arg("id", () => Int) id: number): Promise<BoolApiResponse> {
     try {
       await Event.delete(id);
+      return { ok: true, nodes: true };
+    } catch (e) {
+      return { ok: false, errors: [{ field: "server", message: e.message }] };
+    }
+  }
+
+  @Mutation(() => EventApiResponse)
+  @UseMiddleware(isAuth)
+  async addInvite(
+    @Arg("eventId", () => Int) eventId: number,
+    @Arg("userId", () => Int) userId: number
+  ): Promise<EventApiResponse> {
+    try {
+      const user = await User.findOneOrFail(userId);
+      const event = await Event.findOneOrFail(eventId, {
+        relations: [
+          "creator",
+          "relatedInterests",
+          "wannago",
+          "wannago.user",
+          "invited",
+        ],
+      });
+      event.invited = [...event.invited, user];
+      await event.save();
+      return { ok: true, nodes: event };
+    } catch (e) {
+      return { ok: false, errors: [{ field: "server", message: e.message }] };
+    }
+  }
+
+  @Mutation(() => EventApiResponse)
+  @UseMiddleware(isAuth)
+  async addWannago(
+    @Arg("eventId", () => Int) eventId: number,
+    @Arg("userId", () => Int) userId: number
+  ): Promise<EventApiResponse> {
+    try {
+      await Wannago.create({
+        declined: false,
+        user: { id: userId },
+        event: { id: eventId },
+      }).save();
+      const event = await Event.findOneOrFail(eventId, {
+        relations: [
+          "creator",
+          "relatedInterests",
+          "wannago",
+          "wannago.user",
+          "invited",
+        ],
+      });
+      return { ok: true, nodes: event };
+    } catch (e) {
+      return { ok: false, errors: [{ field: "server", message: e.message }] };
+    }
+  }
+
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async deleteWannago(
+    @Arg("id", () => Int) id: number
+  ): Promise<BoolApiResponse> {
+    try {
+      await Wannago.delete(id);
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
     }
     return { ok: true };
+  }
+
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async updateWannago(
+    @Arg("id", () => Int) id: number,
+    @Arg("declined") declined: boolean
+  ): Promise<BoolApiResponse> {
+    try {
+      const wannago = await Wannago.findOneOrFail(id);
+      wannago.declined = declined;
+      await wannago.save();
+      return { ok: true, nodes: true };
+    } catch (e) {
+      return { ok: false, errors: [{ field: "server", message: e.message }] };
+    }
   }
 
   @FieldResolver()
@@ -172,11 +269,10 @@ export class EventResolver {
     return userLoader.load(event.creatorId);
   }
   @FieldResolver()
-  async wannago(@Root() event: Event, @Ctx() { userLoader }: MyContext) {
+  async wannago(@Root() event: Event, @Ctx() { wannagoLoader }: MyContext) {
     if (event.wannago == null) return [];
-    return userLoader.loadMany(event.wannago.map((user) => user.id));
+    return wannagoLoader.loadMany(event.wannago.map((wannago) => wannago.id));
   }
-
   @FieldResolver()
   async invited(@Root() event: Event, @Ctx() { userLoader }: MyContext) {
     if (event.invited == null) return [];

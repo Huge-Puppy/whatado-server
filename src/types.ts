@@ -6,6 +6,7 @@ import { createChatNotificationLoader } from "./resolvers/loaders/chatNotificati
 import { createEventLoader } from "./resolvers/loaders/eventLoader";
 import { createChatLoader } from "./resolvers/loaders/chatLoader";
 import { createForumLoader } from "./resolvers/loaders/forumLoader";
+import { createWannagoLoader } from "./resolvers/loaders/wannagoLoader";
 
 export type MyContext = {
   req: Request;
@@ -17,6 +18,7 @@ export type MyContext = {
   eventLoader: ReturnType<typeof createEventLoader>;
   chatLoader: ReturnType<typeof createChatLoader>;
   forumLoader: ReturnType<typeof createForumLoader>;
+  wannagoLoader: ReturnType<typeof createWannagoLoader>;
   isDataLoaderAttached: Boolean;
 };
 

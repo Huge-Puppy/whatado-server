@@ -27,7 +27,7 @@ import { hasLoader } from "../middleware/hasLoader";
 export class ChatResolver extends BaseEntity {
   @Query(() => ChatApiResponse)
   @UseMiddleware(isAuth)
-  async chat(@Arg("id") id: number): Promise<ChatApiResponse> {
+  async chat(@Arg("id", () => Int) id: number): Promise<ChatApiResponse> {
     try {
       const chat = await Chat.findOneOrFail({ where: { id } });
       return { nodes: chat };
@@ -140,7 +140,7 @@ export class ChatResolver extends BaseEntity {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async deleteChat(@Arg("id") id: number): Promise<BoolApiResponse> {
+  async deleteChat(@Arg("id", () => Int) id: number): Promise<BoolApiResponse> {
     try {
       await Chat.delete({ id });
     } catch (e) {

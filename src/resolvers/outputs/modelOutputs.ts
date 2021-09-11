@@ -6,6 +6,7 @@ import { User } from "../../entities/User";
 import { Interest } from "../../entities/Interest";
 import { Event } from "../../entities/Event";
 import { ChatNotification } from "../../entities/ChatNotification";
+import { Wannago } from "../../entities/Wannago";
 
 @ObjectType()
 export class ChatApiResponse extends ApiResponse(Chat) {}
@@ -42,3 +43,9 @@ export class ChatNotificationsApiResponse extends ApiListResponse(ChatNotificati
 
 @ObjectType()
 export class ChatNotificationApiResponse extends ApiResponse(ChatNotification) {}
+
+@ObjectType()
+export class WannagoApiResponse extends ApiListResponse(Wannago) {}
+
+@ObjectType()
+export class WannagosApiResponse extends ApiResponse(Wannago) {}

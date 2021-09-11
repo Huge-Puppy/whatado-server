@@ -1,6 +1,7 @@
 import {
   Arg,
   FieldResolver,
+  Int,
   Mutation,
   Query,
   Resolver,
@@ -22,7 +23,7 @@ import { User } from "../entities/User";
 export class InterestResolver extends BaseEntity {
   @Query(() => InterestApiResponse)
   @UseMiddleware(isAuth)
-  async interest(@Arg("id") id: number): Promise<InterestApiResponse> {
+  async interest(@Arg("id", () => Int) id: number): Promise<InterestApiResponse> {
     try {
       const interest = await Interest.findOneOrFail({ where: { id } });
       return { nodes: interest };
@@ -119,7 +120,7 @@ export class InterestResolver extends BaseEntity {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async deleteInterest(@Arg("id") id: number): Promise<BoolApiResponse> {
+  async deleteInterest(@Arg("id", () => Int) id: number): Promise<BoolApiResponse> {
     try {
       await Interest.delete({ id });
     } catch (e) {
