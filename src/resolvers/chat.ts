@@ -124,8 +124,6 @@ export class ChatResolver extends BaseEntity {
         forum,
       }).save();
 
-      console.log("before", chat);
-
       await pubSub.publish("CHAT", chat);
       return { nodes: chat };
     } catch (e) {

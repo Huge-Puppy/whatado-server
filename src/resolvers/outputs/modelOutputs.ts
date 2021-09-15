@@ -49,3 +49,15 @@ export class WannagoApiResponse extends ApiListResponse(Wannago) {}
 
 @ObjectType()
 export class WannagosApiResponse extends ApiResponse(Wannago) {}
+
+@ObjectType()
+export class StringApiResponse extends ApiListResponse(String) {}
+
+@ObjectType()
+export class StringsApiResponse extends ApiResponse(String) {}
+
+@ObjectType()
+export class IntApiResponse extends ApiResponse(Number) {}
+
+@ObjectType()
+export class IntsApiResponse extends ApiListResponse(Number) {}

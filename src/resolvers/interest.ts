@@ -8,22 +8,25 @@ import {
   Root,
   UseMiddleware,
 } from "type-graphql";
-import { BaseEntity, Like } from "typeorm";
+import { BaseEntity, In, Like } from "typeorm";
 import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
 import { Interest } from "../entities/Interest";
 import {
   InterestApiResponse,
   InterestsApiResponse,
+  IntsApiResponse,
 } from "./outputs/modelOutputs";
-import { InterestFilterInput, InterestInput } from "./inputs/interestInputs";
+import { InterestFilterInput } from "./inputs/interestInputs";
 import { User } from "../entities/User";
 
 @Resolver(() => Interest)
 export class InterestResolver extends BaseEntity {
   @Query(() => InterestApiResponse)
   @UseMiddleware(isAuth)
-  async interest(@Arg("id", () => Int) id: number): Promise<InterestApiResponse> {
+  async interest(
+    @Arg("id", () => Int) id: number
+  ): Promise<InterestApiResponse> {
     try {
       const interest = await Interest.findOneOrFail({ where: { id } });
       return { nodes: interest };
@@ -85,25 +88,42 @@ export class InterestResolver extends BaseEntity {
     }
   }
 
-  @Mutation(() => InterestApiResponse)
+  @Mutation(() => IntsApiResponse)
   @UseMiddleware(isAuth)
   async createInterest(
-    @Arg("options") options: InterestInput
-  ): Promise<InterestApiResponse> {
-    let interest;
-    const peopleInterested = options.peopleInterestedIds.map((id) => ({
-      id: id,
-    }));
-    const relatedEvents = options.relatedEventsIds.map((id) => ({
-      id: id,
-    }));
+    @Arg("interestsText", () => [String]) interestsText: string[]
+  ): Promise<IntsApiResponse> {
     try {
-      interest = await Interest.create({
-        title: options.title,
-        popular: options.popular,
-        peopleInterested,
-        relatedEvents,
-      }).save();
+      console.log("interests ids ", interestsText);
+      const oldInterests = await Interest.find({
+        where: { title: In(interestsText) },
+      });
+      const newInterestTitles = interestsText.filter(
+        (title) =>
+          !oldInterests.map((interest) => interest.title).includes(title)
+      );
+      // create new interests
+      const newInterests = await Interest.createQueryBuilder()
+        .insert()
+        .into(Interest)
+        .values(
+          newInterestTitles.map((title) => ({
+            title,
+          }))
+        )
+        .execute();
+      console.log("returning ", [
+        ...newInterests.identifiers.map((obj) => obj.id),
+        ...oldInterests.map((obj) => obj.id),
+      ]);
+
+      return {
+        ok: true,
+        nodes: [
+          ...newInterests.identifiers.map((obj) => Number(obj.id)),
+          ...oldInterests.map((obj) => Number(obj.id)),
+        ],
+      };
     } catch (e) {
       return {
         ok: false,
@@ -115,12 +135,13 @@ export class InterestResolver extends BaseEntity {
         ],
       };
     }
-    return { nodes: interest };
   }
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async deleteInterest(@Arg("id", () => Int) id: number): Promise<BoolApiResponse> {
+  async deleteInterest(
+    @Arg("id", () => Int) id: number
+  ): Promise<BoolApiResponse> {
     try {
       await Interest.delete({ id });
     } catch (e) {

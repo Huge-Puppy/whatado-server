@@ -10,7 +10,7 @@ import {
   Root,
   UseMiddleware,
 } from "type-graphql";
-import { EventInput } from "./inputs/eventInputs";
+import { EventFilterInput, EventInput } from "./inputs/eventInputs";
 import { EventApiResponse, EventsApiResponse } from "./outputs/modelOutputs";
 import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
@@ -19,15 +19,21 @@ import { User } from "../entities/User";
 import { MyContext } from "../types";
 import { ChatNotification } from "../entities/ChatNotification";
 import { Wannago } from "../entities/Wannago";
-import { print } from "graphql";
+import { DateRangeInput } from "./inputs/general";
+import { Between } from "typeorm";
 
 @Resolver(() => Event)
 export class EventResolver {
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
-  async events(): Promise<EventsApiResponse> {
+  async events(
+    @Arg("dateRange", () => DateRangeInput) dateRange: DateRangeInput
+  ): Promise<EventsApiResponse> {
     try {
       const events = await Event.find({
+        where: {
+          time: Between(dateRange.startDate, dateRange.endDate),
+        },
         relations: [
           "relatedInterests",
           "creator",
@@ -36,7 +42,6 @@ export class EventResolver {
           "invited",
         ],
       });
-      console.log(events);
       return { ok: true, nodes: events };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
@@ -95,7 +100,7 @@ export class EventResolver {
       const relatedInterests = options.relatedInterestsIds.map((id) => ({
         id: id,
       }));
-
+      console.log('saving interests', relatedInterests);
       const event = await Event.create({
         time: options.time,
         location: options.location,
@@ -123,39 +128,40 @@ export class EventResolver {
   @Mutation(() => EventApiResponse)
   @UseMiddleware(isAuth)
   async updateEvent(
-    @Arg("options") options: EventInput
+    @Arg("options") options: EventFilterInput
   ): Promise<EventApiResponse> {
     try {
       // should create new interests with client call before updating event
-      const event = await Event.findOneOrFail(options.id, {
-        relations: [
-          "creator",
-          "relatedInterests",
-          "wannago",
-          "wannago.user",
-          "invited",
-        ],
-      });
-      event.title = options.title;
-      event.description = options.description;
-      event.time = options.time;
-      event.pictureUrl = options.pictureUrl;
-      event.location = options.location;
-      event.filterAge = options.filterAge;
-      event.filterLocation = options.filterLocation;
-      event.filterRadius = options.filterRadius;
-      event.filterGender = options.filterGender;
-      event.creator = options.creatorId as any;
-      const relatedInterests = options.relatedInterestsIds.map(
-        (id) => ({ id } as any)
+      const relatedInterests =
+        options.relatedInterestsIds?.map(
+          (id) =>
+            ({
+              id,
+            } as any)
+        ) ?? undefined;
+      const creator = { id: options.creatorId };
+      const forum = { id: options.forumId };
+      const wannago =
+        options.wannagoIds?.map((id) => ({ id } as any)) ?? undefined;
+      const invited =
+        options.invitedIds?.map((id) => ({ id } as any)) ?? undefined;
+      delete options.relatedInterestsIds;
+      delete options.creatorId;
+      delete options.forumId;
+      delete options.wannagoIds;
+      delete options.invitedIds;
+      const event = await Event.update(
+        { id: options.id },
+        {
+          ...options,
+          relatedInterests,
+          creator,
+          forum,
+          wannago,
+          invited,
+        }
       );
-      event.relatedInterests = relatedInterests;
-      const wannago = options.wannagoIds.map((id) => ({ id } as any));
-      event.wannago = wannago;
-      const invited = options.invitedIds.map((id) => ({ id } as any));
-      event.invited = invited;
-      const newEvent = await event.save();
-      return { ok: true, nodes: newEvent };
+      return { ok: true, nodes: event.raw[0] };
     } catch (e) {
       return {
         ok: false,
@@ -171,7 +177,9 @@ export class EventResolver {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async deleteEvent(@Arg("id", () => Int) id: number): Promise<BoolApiResponse> {
+  async deleteEvent(
+    @Arg("id", () => Int) id: number
+  ): Promise<BoolApiResponse> {
     try {
       await Event.delete(id);
       return { ok: true, nodes: true };

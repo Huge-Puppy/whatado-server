@@ -18,7 +18,7 @@ import argon2 from "argon2";
 import { sendEmail } from "../utils/sendEmail";
 import { isAuth } from "../middleware/isAuth";
 import { UserApiResponse, UsersApiResponse } from "./outputs/modelOutputs";
-import { UserInput } from "./inputs/userInputs";
+import { UserFilterInput, UserInput } from "./inputs/userInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { createAccessToken, createRefreshToken } from "../auth";
 import { Interest } from "../entities/Interest";
@@ -216,7 +216,6 @@ export class UserResolver {
 
   @Subscription(() => String, { topics: "HELLO" })
   me_sub(@Root() username: String): String {
-    console.log("jcl me", username);
     return username;
   }
 
@@ -244,11 +243,60 @@ export class UserResolver {
     };
   }
 
+  @Mutation(() => UserApiResponse)
+  @UseMiddleware(isAuth)
+  async updateUser(
+    @Ctx() { payload }: MyContext,
+    @Arg("options") options: UserFilterInput
+  ): Promise<UserApiResponse> {
+    if (!payload) {
+      return {
+        ok: false,
+        errors: [{ message: "uh oh" }],
+      };
+    }
+    try {
+      const themap = new Object({
+        ...options,
+      });
+
+      var finalmap: { [k: string]: any } = {};
+
+      let key: keyof typeof themap;
+      for (key in themap) {
+        if (themap[key] != null) {
+          finalmap[key] = themap[key];
+        }
+      }
+
+
+      const user = await User.update(
+        { id: payload.userId as any },
+        { ...finalmap }
+      );
+
+      return {
+        ok: true,
+        nodes: user.raw[0],
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "user",
+            message: e.message,
+          },
+        ],
+      };
+    }
+  }
+
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async updateBio(
     @Ctx() { payload }: MyContext,
-    @Arg("bio") bio: string,
+    @Arg("bio") bio: string
   ): Promise<BoolApiResponse> {
     if (!payload) {
       return {
@@ -269,7 +317,7 @@ export class UserResolver {
   @UseMiddleware(isAuth)
   async updatePhotos(
     @Ctx() { payload }: MyContext,
-    @Arg("urls", () => [String]) urls: string[],
+    @Arg("urls", () => [String]) urls: string[]
   ): Promise<BoolApiResponse> {
     if (!payload) {
       return {
@@ -287,12 +335,11 @@ export class UserResolver {
     };
   }
 
-
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async updateProfilePhoto(
     @Ctx() { payload }: MyContext,
-    @Arg("url") url: string,
+    @Arg("url") url: string
   ): Promise<BoolApiResponse> {
     if (!payload) {
       return {
@@ -309,7 +356,6 @@ export class UserResolver {
       nodes: true,
     };
   }
-
 
   @Mutation(() => BoolApiResponse)
   async forgotPassword(@Arg("email") email: string): Promise<BoolApiResponse> {
