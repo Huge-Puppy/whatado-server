@@ -22,7 +22,7 @@ import { UserFilterInput, UserInput } from "./inputs/userInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { createAccessToken, createRefreshToken } from "../auth";
 import { Interest } from "../entities/Interest";
-import { In } from "typeorm";
+import { In, MoreThan } from "typeorm";
 
 @Resolver(() => User)
 export class UserResolver {
@@ -41,6 +41,27 @@ export class UserResolver {
       return {
         ok: false,
         errors: [{ field: "User", message: e.message }],
+      };
+    }
+  }
+
+  @Query(() => UsersApiResponse)
+  @UseMiddleware(isAuth)
+  async flaggedUsers(): Promise<UsersApiResponse> {
+    try {
+      const users = await User.find({
+        where: {
+          flags: MoreThan(0),
+        },
+        order: {
+          flags: "DESC"
+        }
+      });
+      return { ok: true, nodes: users };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Users", message: e.message }],
       };
     }
   }
@@ -268,7 +289,6 @@ export class UserResolver {
           finalmap[key] = themap[key];
         }
       }
-
 
       const user = await User.update(
         { id: payload.userId as any },

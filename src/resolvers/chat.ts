@@ -70,6 +70,30 @@ export class ChatResolver extends BaseEntity {
 
   @Query(() => ChatsApiResponse)
   @UseMiddleware(isAuth)
+  async flaggedChats(): Promise<ChatsApiResponse> {
+    try {
+      const chats = await Chat.createQueryBuilder("Chat")
+        .leftJoinAndSelect("Chat.author", "Chat__author")
+        .leftJoinAndSelect("Chat.forum", "Chat__forum")
+        .relation("author")
+        .relation("forum")
+        .select()
+        .where("Chat.flags > :flagged", { flagged: 0 })
+        .orderBy("Chat.flags", "DESC")
+        .getMany();
+      return { ok: true, nodes: chats };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          { field: "chat", message: `error retrieving chats: ${e.message}` },
+        ],
+      };
+    }
+  }
+
+  @Query(() => ChatsApiResponse)
+  @UseMiddleware(isAuth)
   async chats(
     @Arg("forumId", () => Int) forumId: number
   ): Promise<ChatsApiResponse> {

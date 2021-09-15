@@ -30,6 +30,10 @@ export class Chat extends BaseEntity {
   @Column({default: ""})
   text: string;
 
+  @Field(() => Int)
+  @Column({default: 0})
+  flags: number;
+
   @Field(() => User)
   @ManyToOne(() => User, {onDelete: "SET NULL"})
   author: User;

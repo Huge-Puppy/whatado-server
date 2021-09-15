@@ -20,10 +20,35 @@ import { MyContext } from "../types";
 import { ChatNotification } from "../entities/ChatNotification";
 import { Wannago } from "../entities/Wannago";
 import { DateRangeInput } from "./inputs/general";
-import { Between } from "typeorm";
+import { Between, MoreThan } from "typeorm";
 
 @Resolver(() => Event)
 export class EventResolver {
+  @Query(() => EventsApiResponse)
+  @UseMiddleware(isAuth)
+  async flaggedEvents(): Promise<EventsApiResponse> {
+    try {
+      const events = await Event.find({
+        where: {
+          flags: MoreThan(0),
+        },
+        order: {
+          flags: "DESC",
+        },
+        relations: [
+          "relatedInterests",
+          "creator",
+          "wannago",
+          "wannago.user",
+          "invited",
+        ],
+      });
+      return { ok: true, nodes: events };
+    } catch (e) {
+      return { ok: false, errors: [{ field: "server", message: e.message }] };
+    }
+  }
+
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
   async events(
@@ -33,6 +58,9 @@ export class EventResolver {
       const events = await Event.find({
         where: {
           time: Between(dateRange.startDate, dateRange.endDate),
+        },
+        order: {
+          time: "ASC",
         },
         relations: [
           "relatedInterests",
@@ -66,6 +94,7 @@ export class EventResolver {
         .orWhere("Event__creator.id = :creatorId", {
           creatorId: payload!.userId,
         })
+        .orderBy("Event.time", "ASC")
         .getMany();
       return { ok: true, nodes: events };
     } catch (e) {
@@ -100,7 +129,7 @@ export class EventResolver {
       const relatedInterests = options.relatedInterestsIds.map((id) => ({
         id: id,
       }));
-      console.log('saving interests', relatedInterests);
+      console.log("saving interests", relatedInterests);
       const event = await Event.create({
         time: options.time,
         location: options.location,

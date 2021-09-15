@@ -55,6 +55,10 @@ export class Event extends BaseEntity {
   @Column({ default: "" })
   description!: string;
 
+  @Field(() => Int)
+  @Column({ default: 0 })
+  flags!: number;
+
   @Field(() => User)
   @ManyToOne(() => User, (user) => user.myEvents, { cascade: true })
   creator: User;
