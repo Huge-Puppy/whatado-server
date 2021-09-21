@@ -9,6 +9,7 @@ import {
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
+import { Event } from "./Event";
 
 @ObjectType()
 @Entity()
@@ -26,14 +27,24 @@ export class Interest extends BaseEntity {
   updatedAt = new Date();
 
   @Field()
-  @Column({ default: "" })
+  @Column({ unique: true })
   title!: string;
 
   @Field()
-  @Column({default: ""})
-  description!: string;
+  @Column({ default: false })
+  popular: boolean;
 
   @Field(() => [User])
-  @ManyToMany(() => User, user => user.interests)
+  @ManyToMany(() => User, (user) => user.interests, {
+    cascade: true,
+    onDelete: "SET NULL",
+  })
   peopleInterested: User[];
+
+  @Field(() => [Event])
+  @ManyToMany(() => Event, (event) => event.relatedInterests, {
+    cascade: true,
+    onDelete: "CASCADE",
+  })
+  relatedEvents: Event[];
 }

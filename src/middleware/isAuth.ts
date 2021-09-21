@@ -1,6 +1,6 @@
 import { AuthenticationError } from "apollo-server-express";
 import { verify } from "jsonwebtoken";
-import { MyContext } from "src/types";
+import { MyContext } from "../types";
 import { MiddlewareFn } from "type-graphql";
 
 export const isAuth: MiddlewareFn<MyContext> = ({ context }, next) => {

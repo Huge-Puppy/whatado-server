@@ -6,13 +6,13 @@ export const createAccessToken = (user: User) =>
     { userId: user?.id, refreshCount: user?.refreshCount },
     process.env.ACCESS_TOKEN_SECRET!,
     {
-      expiresIn: "15min",
+      expiresIn: "100min",
     }
   );
 
 export const createRefreshToken = (user: User) =>
   sign(
-    { userId: user?.id, count: user?.refreshCount },
+    { userId: user?.id, refreshCount: user?.refreshCount },
     process.env.REFRESH_TOKEN_SECRET!,
     { expiresIn: "15d" }
   );

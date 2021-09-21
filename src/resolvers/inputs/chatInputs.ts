@@ -1,9 +1,21 @@
 import { Chat } from "../../entities/Chat";
 import { Field, InputType, Int } from "type-graphql";
-import { Forum } from "../../entities/Forum";
 
 @InputType()
 export class ChatInput implements Partial<Chat> {
+  
+  @Field()
+  text: string;
+
+  @Field(() => Int)
+  authorId: number;
+
+  @Field(() => Int)
+  forumId: number;
+}
+
+@InputType()
+export class ChatFilterInput implements Partial<Chat> {
   @Field(() => Int, { nullable: true })
   id?: number;
 
@@ -13,6 +25,12 @@ export class ChatInput implements Partial<Chat> {
   @Field(() => String, { nullable: true })
   updatedAt?: Date;
 
-  @Field(() => Forum, { nullable: true })
-  forum?: Forum;
+  @Field({nullable: true})
+  text?: string;
+
+  @Field(() => Int, {nullable: true})
+  authorId?: number;
+
+  @Field(() => Int, { nullable: true })
+  forumId?: number;
 }
