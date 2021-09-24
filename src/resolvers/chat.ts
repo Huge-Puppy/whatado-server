@@ -119,13 +119,14 @@ export class ChatResolver extends BaseEntity {
   }
 
   @Subscription(() => Chat, {
-    topics: ({ args, payload, context }) => {
+    topics: ({ args }) => {
+      console.log(args);
       return `${args.forumId}`;
     },
   })
   @UseMiddleware(hasLoader)
   async chatSubscription(
-    @Arg("forumId", () => Int) forumId: number,
+    @Arg("forumId", () => Int) _forumId: number,
     @Root() chat: Chat
   ): Promise<Chat> {
     chat.createdAt = new Date(chat.createdAt);
