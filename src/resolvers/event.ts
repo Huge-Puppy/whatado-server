@@ -76,6 +76,27 @@ export class EventResolver {
     }
   }
 
+  @Mutation(() => BoolApiResponse)
+  async flagEvent(
+    @Arg("eventId", () => Int) eventId: number
+  ): Promise<BoolApiResponse> {
+    try {
+      var event = await Event.findOneOrFail(eventId);
+      event.flags = event.flags+1;
+      await event.save();
+      return {
+        ok: true,
+        nodes: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "flag user", message: e.message }],
+      };
+    }
+  }
+
+
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
   async myEvents(@Ctx() { payload }: MyContext): Promise<EventsApiResponse> {
@@ -207,10 +228,10 @@ export class EventResolver {
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async deleteEvent(
-    @Arg("id", () => Int) id: number
+    @Arg("eventId", () => Int) eventId: number
   ): Promise<BoolApiResponse> {
     try {
-      await Event.delete(id);
+      await Event.delete(eventId);
       return { ok: true, nodes: true };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
