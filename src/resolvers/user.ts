@@ -54,8 +54,8 @@ export class UserResolver {
           flags: MoreThan(0),
         },
         order: {
-          flags: "DESC"
-        }
+          flags: "DESC",
+        },
       });
       return { ok: true, nodes: users };
     } catch (e) {
@@ -200,6 +200,48 @@ export class UserResolver {
     const accessToken = createAccessToken(user);
     const refreshToken = createRefreshToken(user);
     return { ok: true, nodes: user, jwt: { accessToken, refreshToken } };
+  }
+
+  @Mutation(() => BoolApiResponse)
+  async blockUser(
+    @Arg("userId", () => Int) userId: number,
+    @Ctx() { payload }: MyContext,
+  ): Promise<BoolApiResponse> {
+    try {
+      var userToBlock = await User.findOneOrFail(userId);
+      var user = await User.findOneOrFail(payload?.userId);
+      user.blockedUsers.push(userToBlock);
+      await user.save();
+      return {
+        ok: true,
+        nodes: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "flag user", message: e.message }],
+      };
+    }
+  }
+
+  @Mutation(() => BoolApiResponse)
+  async flagUser(
+    @Arg("userId", () => Int) userId: number
+  ): Promise<BoolApiResponse> {
+    try {
+      var user = await User.findOneOrFail(userId);
+      user.flags = user.flags+1;
+      await user.save();
+      return {
+        ok: true,
+        nodes: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "flag user", message: e.message }],
+      };
+    }
   }
 
   @Mutation(() => UserApiResponse)

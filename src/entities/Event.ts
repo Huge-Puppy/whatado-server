@@ -73,7 +73,7 @@ export class Event extends BaseEntity {
 
   @Field(() => [User])
   @ManyToMany(() => User, {
-    onDelete: "SET NULL",
+    onDelete: "CASCADE",
     cascade: ["update", "insert"],
   })
   @JoinTable()

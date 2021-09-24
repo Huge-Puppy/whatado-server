@@ -70,22 +70,30 @@ export class User extends BaseEntity {
 
   @Field(() => [Interest])
   @ManyToMany(() => Interest, (interest) => interest.peopleInterested, {
-    onDelete: "SET NULL",
+    onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   @JoinTable()
   interests: Interest[];
 
+  @Field(() => [User])
+  @ManyToMany(() => User, {
+    onDelete: "CASCADE",
+    cascade: ["insert", "update"],
+  })
+  @JoinTable()
+  blockedUsers: User[];
+
   @Field(() => [Event])
   @OneToMany(() => Event, (event) => event.creator, {
-    onDelete: "SET NULL",
+    onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   myEvents: Event[];
 
   @Field(() => [ChatNotification])
   @OneToMany(() => ChatNotification, (n) => n.user, {
-    onDelete: "SET NULL",
+    onDelete: "CASCADE",
     cascade: ["update", "insert"],
   })
   chatNotifications: ChatNotification[];

@@ -119,16 +119,15 @@ export class ChatResolver extends BaseEntity {
   }
 
   @Subscription(() => Chat, {
-    // topics: ({args, payload, context }) => {
-    // console.log(payload);
-    // console.log(args);
-    // console.log(context);
-    // return "HELLO";
-    // },
-    topics: "CHAT",
+    topics: ({ args, payload, context }) => {
+      return `${args.forumId}`;
+    },
   })
   @UseMiddleware(hasLoader)
-  async chatSubscription(@Root() chat: Chat): Promise<Chat> {
+  async chatSubscription(
+    @Arg("forumId", () => Int) forumId: number,
+    @Root() chat: Chat
+  ): Promise<Chat> {
     chat.createdAt = new Date(chat.createdAt);
     return chat;
   }
@@ -148,7 +147,7 @@ export class ChatResolver extends BaseEntity {
         forum,
       }).save();
 
-      await pubSub.publish("CHAT", chat);
+      await pubSub.publish(`${options.forumId}`, chat);
       return { nodes: chat };
     } catch (e) {
       return {
