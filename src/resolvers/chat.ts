@@ -120,7 +120,6 @@ export class ChatResolver extends BaseEntity {
 
   @Subscription(() => Chat, {
     topics: ({ args }) => {
-      console.log(args);
       return `${args.forumId}`;
     },
   })
