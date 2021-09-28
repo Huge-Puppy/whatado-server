@@ -52,7 +52,9 @@ export class EventResolver {
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
   async events(
-    @Arg("dateRange", () => DateRangeInput) dateRange: DateRangeInput
+    @Arg("dateRange", () => DateRangeInput) dateRange: DateRangeInput,
+    @Arg("take", () => Int) take: number,
+    @Arg("skip", () => Int) skip: number
   ): Promise<EventsApiResponse> {
     try {
       const events = await Event.find({
@@ -62,6 +64,8 @@ export class EventResolver {
         order: {
           time: "ASC",
         },
+        skip: skip,
+        take: take,
         relations: [
           "relatedInterests",
           "creator",
@@ -82,7 +86,7 @@ export class EventResolver {
   ): Promise<BoolApiResponse> {
     try {
       var event = await Event.findOneOrFail(eventId);
-      event.flags = event.flags+1;
+      event.flags = event.flags + 1;
       await event.save();
       return {
         ok: true,
@@ -95,7 +99,6 @@ export class EventResolver {
       };
     }
   }
-
 
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)

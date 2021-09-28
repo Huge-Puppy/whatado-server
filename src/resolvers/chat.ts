@@ -95,7 +95,9 @@ export class ChatResolver extends BaseEntity {
   @Query(() => ChatsApiResponse)
   @UseMiddleware(isAuth)
   async chats(
-    @Arg("forumId", () => Int) forumId: number
+    @Arg("forumId", () => Int) forumId: number,
+    @Arg("take", () => Int, {nullable: true}) take: number | undefined,
+    @Arg("skip", () => Int, {nullable: true}) skip: number | undefined,
   ): Promise<ChatsApiResponse> {
     try {
       const chats = await Chat.createQueryBuilder("Chat")
@@ -106,7 +108,10 @@ export class ChatResolver extends BaseEntity {
         .select()
         .where("Chat__forum.id = :forumId", { forumId })
         .orderBy("Chat.createdAt", "DESC")
+        .skip(skip)
+        .take(take)
         .getMany();
+
       return { ok: true, nodes: chats };
     } catch (e) {
       return {
