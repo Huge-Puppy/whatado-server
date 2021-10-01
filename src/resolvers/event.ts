@@ -21,6 +21,7 @@ import { ChatNotification } from "../entities/ChatNotification";
 import { Wannago } from "../entities/Wannago";
 import { DateRangeInput } from "./inputs/general";
 import { Between, MoreThan } from "typeorm";
+import * as admin from "firebase-admin";
 
 @Resolver(() => Event)
 export class EventResolver {
@@ -129,10 +130,22 @@ export class EventResolver {
     }
   }
 
-  @Query(() => Event, { nullable: true })
+  @Query(() => EventApiResponse)
   @UseMiddleware(isAuth)
   async event(@Arg("id", () => Int) id: number): Promise<EventApiResponse> {
-    return { ok: true, nodes: await Event.findOne(id) };
+    try {
+      return { ok: true, nodes: await Event.findOne(id) };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "event",
+            message: e.message,
+          },
+        ],
+      };
+    }
   }
 
   @Mutation(() => EventApiResponse)
@@ -260,6 +273,25 @@ export class EventResolver {
       });
       event.invited = [...event.invited, user];
       await event.save();
+      const message = {
+        token: user.deviceId,
+        data: {type: "event"},
+        notification: {
+          title: "You're Invited!",
+          body: `You're invited to ${event.title}`,
+        },
+        contentAvailable: true,
+        priority: "high",
+      };
+      await admin
+        .messaging()
+        .send(message)
+        .then((response) => {
+          console.log("Successfully sent message:", response);
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
       return { ok: true, nodes: event };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };

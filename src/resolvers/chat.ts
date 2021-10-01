@@ -22,6 +22,7 @@ import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
 import { hasLoader } from "../middleware/hasLoader";
+import * as admin from "firebase-admin";
 
 @Resolver(() => Chat)
 export class ChatResolver extends BaseEntity {
@@ -96,8 +97,8 @@ export class ChatResolver extends BaseEntity {
   @UseMiddleware(isAuth)
   async chats(
     @Arg("forumId", () => Int) forumId: number,
-    @Arg("take", () => Int, {nullable: true}) take: number | undefined,
-    @Arg("skip", () => Int, {nullable: true}) skip: number | undefined,
+    @Arg("take", () => Int, { nullable: true }) take: number | undefined,
+    @Arg("skip", () => Int, { nullable: true }) skip: number | undefined
   ): Promise<ChatsApiResponse> {
     try {
       const chats = await Chat.createQueryBuilder("Chat")
@@ -152,7 +153,31 @@ export class ChatResolver extends BaseEntity {
         forum,
       }).save();
 
+      console.log('jcl', forum.event.id);
       await pubSub.publish(`${options.forumId}`, chat);
+      const message = {
+        data: {
+          type: "chat",
+          forumId: `${options.forumId}`,
+          eventId: `${forum.event.id}`,
+        },
+        notification: {
+          title: "New Message",
+          body: `New message from ${author.username}`,
+        },
+        contentAvailable: true,
+        priority: "high",
+        topic: `${options.forumId}`,
+      };
+      await admin
+        .messaging()
+        .send(message)
+        .then((response) => {
+          console.log("Successfully sent message:", response);
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
       return { nodes: chat };
     } catch (e) {
       return {

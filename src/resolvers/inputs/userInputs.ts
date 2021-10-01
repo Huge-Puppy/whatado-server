@@ -1,5 +1,5 @@
 import { User } from "../../entities/User";
-import { Field, InputType } from "type-graphql";
+import { Field, InputType, Int } from "type-graphql";
 
 @InputType()
 export class UserInput {
@@ -15,7 +15,7 @@ export class UserInput {
 
 @InputType()
 export class UserFilterInput implements Partial<User> {
-  @Field({ nullable: true })
+  @Field(() => Int, { nullable: true })
   id?: number;
   @Field({ nullable: true })
   email?: string;
@@ -25,6 +25,8 @@ export class UserFilterInput implements Partial<User> {
   birthday?: Date;
   @Field({ nullable: true })
   profilePhotoUrl?: string;
+  @Field({ nullable: true })
+  deviceId?: string;
   @Field({ nullable: true })
   photoUrls?: string;
   @Field({ nullable: true })

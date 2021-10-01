@@ -375,6 +375,7 @@ export class UserResolver {
       nodes: true,
     };
   }
+  
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async updatePhotos(
