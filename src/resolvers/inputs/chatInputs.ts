@@ -12,6 +12,9 @@ export class ChatInput implements Partial<Chat> {
 
   @Field(() => Int)
   forumId: number;
+
+  @Field(() => Int)
+  eventId: number;
 }
 
 @InputType()

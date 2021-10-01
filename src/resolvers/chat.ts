@@ -153,13 +153,13 @@ export class ChatResolver extends BaseEntity {
         forum,
       }).save();
 
-      console.log('jcl', forum.event.id);
+      // console.log('jcl', forum.event.id);
       await pubSub.publish(`${options.forumId}`, chat);
       const message = {
         data: {
           type: "chat",
           forumId: `${options.forumId}`,
-          eventId: `${forum.event.id}`,
+          eventId: `${options.eventId}`,
         },
         notification: {
           title: "New Message",
