@@ -162,8 +162,11 @@ export class ChatResolver extends BaseEntity {
           eventId: `${chatOptions.eventId}`,
         },
         notification: {
-          title: "New Message",
-          body: `New message from ${author.username}`,
+          title: `New Message from ${author.username}`,
+          body:
+            chat.text.length > 20
+              ? `${chat.text.substring(0, 20)}...`
+              : chat.text,
         },
       };
       const options = {

@@ -284,18 +284,19 @@ export class EventResolver {
       event.invited = [...event.invited, user];
       await event.save();
       const message = {
-        token: user.deviceId,
         data: {type: "event"},
         notification: {
           title: "You're Invited!",
           body: `You're invited to ${event.title}`,
         },
+      };
+      const options = {
         contentAvailable: true,
         priority: "high",
-      };
+      }
       await admin
         .messaging()
-        .send(message)
+        .sendToDevice(user.deviceId, message, options)
         .then((response) => {
           console.log("Successfully sent message:", response);
         })

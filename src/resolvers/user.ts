@@ -45,6 +45,23 @@ export class UserResolver {
     }
   }
 
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async removeAccount(@Ctx() { payload }: MyContext): Promise<BoolApiResponse> {
+    try {
+      await User.delete(payload!.userId);
+      return {
+        nodes: true,
+        ok: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Remove Account", message: e.message }],
+      };
+    }
+  }
+
   @Query(() => UsersApiResponse)
   @UseMiddleware(isAuth)
   async flaggedUsers(): Promise<UsersApiResponse> {
