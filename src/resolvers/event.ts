@@ -182,6 +182,15 @@ export class EventResolver {
         relatedInterests,
         forum: forum,
       }).save();
+      await admin
+        .messaging()
+        .subscribeToTopic([payload!.userId], `${forum.id}`)
+        .then((response) => {
+          console.log("Successfully subscribed to topic:", response);
+        })
+        .catch((error) => {
+          console.log("Error subscribing to topic:", error);
+        });
       return { ok: true, nodes: event };
     } catch (e) {
       return {
@@ -269,6 +278,7 @@ export class EventResolver {
           "wannago",
           "wannago.user",
           "invited",
+          "forum",
         ],
       });
       event.invited = [...event.invited, user];
@@ -291,6 +301,15 @@ export class EventResolver {
         })
         .catch((error) => {
           console.log("Error sending message:", error);
+        });
+      await admin
+        .messaging()
+        .subscribeToTopic([user.deviceId], `${event.forum.id}`)
+        .then((response) => {
+          console.log("Successfully subscribed to topic:", response);
+        })
+        .catch((error) => {
+          console.log("Error subscribing to topic:", error);
         });
       return { ok: true, nodes: event };
     } catch (e) {
@@ -354,6 +373,13 @@ export class EventResolver {
     }
   }
 
+  @FieldResolver()
+  async forum(
+    @Root() event: Event,
+    @Ctx() { forumLoader }: MyContext
+  ): Promise<Forum> {
+    return forumLoader.load(event.forum.id);
+  }
   @FieldResolver()
   async creator(
     @Root() event: Event,

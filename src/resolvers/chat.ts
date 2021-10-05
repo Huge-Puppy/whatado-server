@@ -141,37 +141,38 @@ export class ChatResolver extends BaseEntity {
   @Mutation(() => ChatApiResponse)
   @UseMiddleware(isAuth)
   async createChat(
-    @Arg("options") options: ChatInput,
+    @Arg("options") chatOptions: ChatInput,
     @PubSub() pubSub: PubSubEngine
   ): Promise<ChatApiResponse> {
     try {
-      const forum = await Forum.findOneOrFail({ id: options.forumId });
-      const author = await User.findOneOrFail({ id: options.authorId });
+      const forum = await Forum.findOneOrFail({ id: chatOptions.forumId });
+      const author = await User.findOneOrFail({ id: chatOptions.authorId });
       const chat = await Chat.create({
-        text: options.text,
+        text: chatOptions.text,
         author,
         forum,
       }).save();
 
       // console.log('jcl', forum.event.id);
-      await pubSub.publish(`${options.forumId}`, chat);
+      await pubSub.publish(`${chatOptions.forumId}`, chat);
       const message = {
         data: {
           type: "chat",
-          forumId: `${options.forumId}`,
-          eventId: `${options.eventId}`,
+          forumId: `${chatOptions.forumId}`,
+          eventId: `${chatOptions.eventId}`,
         },
         notification: {
           title: "New Message",
           body: `New message from ${author.username}`,
         },
-        contentAvailable: true,
+      };
+      const options = {
         priority: "high",
-        topic: `${options.forumId}`,
+        contentAvailable: true,
       };
       await admin
         .messaging()
-        .send(message)
+        .sendToTopic(`${chatOptions.forumId}`, message, options)
         .then((response) => {
           console.log("Successfully sent message:", response);
         })

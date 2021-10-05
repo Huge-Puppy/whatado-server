@@ -27,6 +27,9 @@ import { createEventLoader } from "./resolvers/loaders/eventLoader";
 import { createChatLoader } from "./resolvers/loaders/chatLoader";
 import { createForumLoader } from "./resolvers/loaders/forumLoader";
 import { createWannagoLoader } from "./resolvers/loaders/wannagoLoader";
+import * as admin from "firebase-admin";
+var serviceAccount = require("../firebase-adminsdk.json");
+
 // import WebSocket from "ws";
 // import { Chat } from "./entities/Chat";
 // import { Event } from "./entities/Event";
@@ -35,6 +38,12 @@ import { createWannagoLoader } from "./resolvers/loaders/wannagoLoader";
 const main = async () => {
   await createConnection();
   const app = express();
+
+  // Initialize Firebase Admin SDK
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://whatado-default-rtdb.firebaseio.com",
+  });
 
   // const chats = await Chat.find();
   // Chat.remove(chats);
@@ -51,7 +60,12 @@ const main = async () => {
     const authorization = req.headers["authorization"];
     const token = authorization?.split(" ")[1];
     if (!token) {
-      return res.send({ ok: false, accessToken: "", refreshToken: "" });
+      return res.send({
+        ok: false,
+        accessToken: null,
+        refreshToken: null,
+        userId: null,
+      });
     }
 
     let payload: any = null;
@@ -59,19 +73,35 @@ const main = async () => {
       payload = verify(token, process.env.REFRESH_TOKEN_SECRET!);
       const user = await User.findOneOrFail({ id: payload.userId });
       if (!user) {
-        return res.send({ ok: false, accessToken: "", refreshToken: "" });
+        return res.send({
+          ok: false,
+          accessToken: null,
+          refreshToken: null,
+          userId: null,
+        });
       }
       if (payload.refreshCount === user.refreshCount) {
         return res.send({
           ok: true,
           accessToken: createAccessToken(user),
           refreshToken: createRefreshToken(user),
+          userId: payload.userId,
         });
       } else {
-        return res.send({ ok: false, accessToken: null, refreshToken: null });
+        return res.send({
+          ok: false,
+          accessToken: null,
+          refreshToken: null,
+          userId: null,
+        });
       }
     } catch (e) {
-      return res.send({ ok: false, accessToken: null, refreshToken: null });
+      return res.send({
+        ok: false,
+        accessToken: null,
+        refreshToken: null,
+        userId: null,
+      });
     }
   });
 
