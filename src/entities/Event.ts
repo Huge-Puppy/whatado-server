@@ -60,7 +60,7 @@ export class Event extends BaseEntity {
   flags!: number;
 
   @Field(() => User)
-  @ManyToOne(() => User, (user) => user.myEvents, { cascade: true })
+  @ManyToOne(() => User, (user) => user.myEvents, { onDelete: "CASCADE"  ,cascade: true })
   creator: User;
   @RelationId((event: Event) => event.creator)
   creatorId: number;

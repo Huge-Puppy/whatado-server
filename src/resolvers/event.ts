@@ -21,6 +21,7 @@ import { ChatNotification } from "../entities/ChatNotification";
 import { Wannago } from "../entities/Wannago";
 import { DateRangeInput } from "./inputs/general";
 import { Between, MoreThan } from "typeorm";
+import * as admin from "firebase-admin";
 
 @Resolver(() => Event)
 export class EventResolver {
@@ -52,7 +53,9 @@ export class EventResolver {
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
   async events(
-    @Arg("dateRange", () => DateRangeInput) dateRange: DateRangeInput
+    @Arg("dateRange", () => DateRangeInput) dateRange: DateRangeInput,
+    @Arg("take", () => Int) take: number,
+    @Arg("skip", () => Int) skip: number
   ): Promise<EventsApiResponse> {
     try {
       const events = await Event.find({
@@ -62,6 +65,8 @@ export class EventResolver {
         order: {
           time: "ASC",
         },
+        skip: skip,
+        take: take,
         relations: [
           "relatedInterests",
           "creator",
@@ -82,7 +87,7 @@ export class EventResolver {
   ): Promise<BoolApiResponse> {
     try {
       var event = await Event.findOneOrFail(eventId);
-      event.flags = event.flags+1;
+      event.flags = event.flags + 1;
       await event.save();
       return {
         ok: true,
@@ -95,7 +100,6 @@ export class EventResolver {
       };
     }
   }
-
 
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
@@ -126,10 +130,22 @@ export class EventResolver {
     }
   }
 
-  @Query(() => Event, { nullable: true })
+  @Query(() => EventApiResponse)
   @UseMiddleware(isAuth)
   async event(@Arg("id", () => Int) id: number): Promise<EventApiResponse> {
-    return { ok: true, nodes: await Event.findOne(id) };
+    try {
+      return { ok: true, nodes: await Event.findOne(id) };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "event",
+            message: e.message,
+          },
+        ],
+      };
+    }
   }
 
   @Mutation(() => EventApiResponse)
@@ -166,6 +182,15 @@ export class EventResolver {
         relatedInterests,
         forum: forum,
       }).save();
+      await admin
+        .messaging()
+        .subscribeToTopic([payload!.userId], `${forum.id}`)
+        .then((response) => {
+          console.log("Successfully subscribed to topic:", response);
+        })
+        .catch((error) => {
+          console.log("Error subscribing to topic:", error);
+        });
       return { ok: true, nodes: event };
     } catch (e) {
       return {
@@ -253,10 +278,40 @@ export class EventResolver {
           "wannago",
           "wannago.user",
           "invited",
+          "forum",
         ],
       });
       event.invited = [...event.invited, user];
       await event.save();
+      const message = {
+        data: {type: "event"},
+        notification: {
+          title: "You're Invited!",
+          body: `You're invited to ${event.title}`,
+        },
+      };
+      const options = {
+        contentAvailable: true,
+        priority: "high",
+      }
+      await admin
+        .messaging()
+        .sendToDevice(user.deviceId, message, options)
+        .then((response) => {
+          console.log("Successfully sent message:", response);
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
+      await admin
+        .messaging()
+        .subscribeToTopic([user.deviceId], `${event.forum.id}`)
+        .then((response) => {
+          console.log("Successfully subscribed to topic:", response);
+        })
+        .catch((error) => {
+          console.log("Error subscribing to topic:", error);
+        });
       return { ok: true, nodes: event };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
@@ -319,6 +374,13 @@ export class EventResolver {
     }
   }
 
+  @FieldResolver()
+  async forum(
+    @Root() event: Event,
+    @Ctx() { forumLoader }: MyContext
+  ): Promise<Forum> {
+    return forumLoader.load(event.forum.id);
+  }
   @FieldResolver()
   async creator(
     @Root() event: Event,

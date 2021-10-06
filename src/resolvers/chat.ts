@@ -22,6 +22,7 @@ import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
 import { hasLoader } from "../middleware/hasLoader";
+import * as admin from "firebase-admin";
 
 @Resolver(() => Chat)
 export class ChatResolver extends BaseEntity {
@@ -95,7 +96,9 @@ export class ChatResolver extends BaseEntity {
   @Query(() => ChatsApiResponse)
   @UseMiddleware(isAuth)
   async chats(
-    @Arg("forumId", () => Int) forumId: number
+    @Arg("forumId", () => Int) forumId: number,
+    @Arg("take", () => Int, { nullable: true }) take: number | undefined,
+    @Arg("skip", () => Int, { nullable: true }) skip: number | undefined
   ): Promise<ChatsApiResponse> {
     try {
       const chats = await Chat.createQueryBuilder("Chat")
@@ -106,7 +109,10 @@ export class ChatResolver extends BaseEntity {
         .select()
         .where("Chat__forum.id = :forumId", { forumId })
         .orderBy("Chat.createdAt", "DESC")
+        .skip(skip)
+        .take(take)
         .getMany();
+
       return { ok: true, nodes: chats };
     } catch (e) {
       return {
@@ -135,19 +141,47 @@ export class ChatResolver extends BaseEntity {
   @Mutation(() => ChatApiResponse)
   @UseMiddleware(isAuth)
   async createChat(
-    @Arg("options") options: ChatInput,
+    @Arg("options") chatOptions: ChatInput,
     @PubSub() pubSub: PubSubEngine
   ): Promise<ChatApiResponse> {
     try {
-      const forum = await Forum.findOneOrFail({ id: options.forumId });
-      const author = await User.findOneOrFail({ id: options.authorId });
+      const forum = await Forum.findOneOrFail({ id: chatOptions.forumId });
+      const author = await User.findOneOrFail({ id: chatOptions.authorId });
       const chat = await Chat.create({
-        text: options.text,
+        text: chatOptions.text,
         author,
         forum,
       }).save();
 
-      await pubSub.publish(`${options.forumId}`, chat);
+      // console.log('jcl', forum.event.id);
+      await pubSub.publish(`${chatOptions.forumId}`, chat);
+      const message = {
+        data: {
+          type: "chat",
+          forumId: `${chatOptions.forumId}`,
+          eventId: `${chatOptions.eventId}`,
+        },
+        notification: {
+          title: `New Message from ${author.username}`,
+          body:
+            chat.text.length > 20
+              ? `${chat.text.substring(0, 20)}...`
+              : chat.text,
+        },
+      };
+      const options = {
+        priority: "high",
+        contentAvailable: true,
+      };
+      await admin
+        .messaging()
+        .sendToTopic(`${chatOptions.forumId}`, message, options)
+        .then((response) => {
+          console.log("Successfully sent message:", response);
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
       return { nodes: chat };
     } catch (e) {
       return {

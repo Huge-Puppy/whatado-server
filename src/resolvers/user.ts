@@ -45,6 +45,23 @@ export class UserResolver {
     }
   }
 
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async removeAccount(@Ctx() { payload }: MyContext): Promise<BoolApiResponse> {
+    try {
+      await User.delete(payload!.userId);
+      return {
+        nodes: true,
+        ok: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Remove Account", message: e.message }],
+      };
+    }
+  }
+
   @Query(() => UsersApiResponse)
   @UseMiddleware(isAuth)
   async flaggedUsers(): Promise<UsersApiResponse> {
@@ -205,7 +222,7 @@ export class UserResolver {
   @Mutation(() => BoolApiResponse)
   async blockUser(
     @Arg("userId", () => Int) userId: number,
-    @Ctx() { payload }: MyContext,
+    @Ctx() { payload }: MyContext
   ): Promise<BoolApiResponse> {
     try {
       var userToBlock = await User.findOneOrFail(userId);
@@ -230,7 +247,7 @@ export class UserResolver {
   ): Promise<BoolApiResponse> {
     try {
       var user = await User.findOneOrFail(userId);
-      user.flags = user.flags+1;
+      user.flags = user.flags + 1;
       await user.save();
       return {
         ok: true,
@@ -375,6 +392,7 @@ export class UserResolver {
       nodes: true,
     };
   }
+
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async updatePhotos(
