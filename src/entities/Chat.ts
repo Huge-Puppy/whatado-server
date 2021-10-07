@@ -35,7 +35,7 @@ export class Chat extends BaseEntity {
   flags: number;
 
   @Field(() => User)
-  @ManyToOne(() => User, {onDelete: "SET NULL"})
+  @ManyToOne(() => User, {onDelete: "CASCADE"})
   author: User;
 
   @Field(() => Forum)
