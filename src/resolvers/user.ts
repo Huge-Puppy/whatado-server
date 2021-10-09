@@ -178,20 +178,6 @@ export class UserResolver {
 
   @Mutation(() => UserApiResponse)
   async register(@Arg("options") options: UserInput): Promise<UserApiResponse> {
-    if (!options.phone?.includes("@")) {
-      return {
-        ok: false,
-        errors: [{ field: "phone", message: "invalid phone number" }],
-      };
-    }
-    if (options.password.length < 6) {
-      return {
-        ok: false,
-        errors: [
-          { field: "password", message: "length must be greater than 6" },
-        ],
-      };
-    }
     const hashedPassword = await argon2.hash(options.password);
     let user;
     try {
