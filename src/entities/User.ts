@@ -31,11 +31,11 @@ export class User extends BaseEntity {
 
   @Field()
   @Column()
-  username!: string;
+  name!: string;
 
   @Field()
   @Column({ unique: true })
-  email!: string;
+  phone!: string;
 
   @Column()
   password!: string;
@@ -47,10 +47,6 @@ export class User extends BaseEntity {
   @Field()
   @Column()
   birthday!: Date;
-
-  @Field()
-  @Column({ default: "" })
-  profilePhotoUrl!: string;
 
   @Field()
   @Column({default: ''})

@@ -4,11 +4,11 @@ import { Field, InputType, Int } from "type-graphql";
 @InputType()
 export class UserInput {
   @Field({ nullable: true })
-  email?: string;
+  phone?: string;
   @Field()
   password: string;
   @Field({ nullable: true })
-  username?: string;
+  name?: string;
   @Field({ nullable: true })
   birthday?: Date;
 }
@@ -18,13 +18,11 @@ export class UserFilterInput implements Partial<User> {
   @Field(() => Int, { nullable: true })
   id?: number;
   @Field({ nullable: true })
-  email?: string;
+  phone?: string;
   @Field({ nullable: true })
-  username?: string;
+  name?: string;
   @Field({ nullable: true })
   birthday?: Date;
-  @Field({ nullable: true })
-  profilePhotoUrl?: string;
   @Field({ nullable: true })
   deviceId?: string;
   @Field({ nullable: true })

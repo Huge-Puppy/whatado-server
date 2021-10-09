@@ -178,10 +178,10 @@ export class UserResolver {
 
   @Mutation(() => UserApiResponse)
   async register(@Arg("options") options: UserInput): Promise<UserApiResponse> {
-    if (!options.email?.includes("@")) {
+    if (!options.phone?.includes("@")) {
       return {
         ok: false,
-        errors: [{ field: "email", message: "invalid email address" }],
+        errors: [{ field: "phone", message: "invalid phone number" }],
       };
     }
     if (options.password.length < 6) {
@@ -197,15 +197,15 @@ export class UserResolver {
     try {
       user = await User.create({
         password: hashedPassword,
-        email: options.email,
-        username: options.username,
+        phone: options.phone,
+        name: options.name,
         birthday: options.birthday,
       }).save();
     } catch (e) {
       if (e.code === "23505" || e.detail.includes("already exists"))
         return {
           ok: false,
-          errors: [{ message: "email already in use", field: "email" }],
+          errors: [{ message: "phone number already in use", field: "phone" }],
         };
       return {
         ok: false,
@@ -266,14 +266,14 @@ export class UserResolver {
     try {
       const user = await User.findOne({
         where:
-          options.username == null
-            ? { email: options.email!.toLowerCase() }
-            : { username: options.username!.toLowerCase() },
+          options.name == null
+            ? { phone: options.phone!.toLowerCase() }
+            : { name: options.name!.toLowerCase() },
       });
       if (!user) {
         return {
           ok: false,
-          errors: [{ field: "email", message: "email not in use" }],
+          errors: [{ field: "phone", message: "phone number not in use" }],
         };
       }
       const valid = await argon2.verify(user.password, options.password);
@@ -289,7 +289,7 @@ export class UserResolver {
     } catch (e) {
       return {
         ok: false,
-        errors: [{ field: "email", message: "please try again later" }],
+        errors: [{ field: "phone", message: "please try again later" }],
       };
     }
   }
@@ -313,7 +313,7 @@ export class UserResolver {
       };
     }
     const user = await User.findOneOrFail(payload.userId);
-    user.username = username;
+    user.name = username;
     user.save();
     await pubSub.publish("HELLO", username);
 
@@ -373,28 +373,6 @@ export class UserResolver {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async updateBio(
-    @Ctx() { payload }: MyContext,
-    @Arg("bio") bio: string
-  ): Promise<BoolApiResponse> {
-    if (!payload) {
-      return {
-        ok: false,
-        errors: [{ message: "uh oh" }],
-      };
-    }
-    const user = await User.findOneOrFail(payload.userId);
-    user.bio = bio;
-    user.save();
-
-    return {
-      ok: true,
-      nodes: true,
-    };
-  }
-
-  @Mutation(() => BoolApiResponse)
-  @UseMiddleware(isAuth)
   async updatePhotos(
     @Ctx() { payload }: MyContext,
     @Arg("urls", () => [String]) urls: string[]
@@ -416,41 +394,19 @@ export class UserResolver {
   }
 
   @Mutation(() => BoolApiResponse)
-  @UseMiddleware(isAuth)
-  async updateProfilePhoto(
-    @Ctx() { payload }: MyContext,
-    @Arg("url") url: string
-  ): Promise<BoolApiResponse> {
-    if (!payload) {
-      return {
-        ok: false,
-        errors: [{ message: "uh oh" }],
-      };
-    }
-    const user = await User.findOneOrFail(payload.userId);
-    user.profilePhotoUrl = url;
-    user.save();
-
-    return {
-      ok: true,
-      nodes: true,
-    };
-  }
-
-  @Mutation(() => BoolApiResponse)
-  async forgotPassword(@Arg("email") email: string): Promise<BoolApiResponse> {
-    const user = await User.findOne({ where: { email } });
+  async forgotPassword(@Arg("phone") phone: string): Promise<BoolApiResponse> {
+    const user = await User.findOne({ where: { phone: phone } });
     if (!user) {
       return {
         ok: false,
-        errors: [{ field: "email", message: "email not in use" }],
+        errors: [{ field: "phone", message: "phone not in use" }],
       };
     }
     try {
       const tempToken = createAccessToken(user);
       await sendEmail(
-        user.email,
-        `Hi ${user.username},\n\n
+        user.phone,
+        `Hi ${user.name},\n\n
         Please use this link to reset your password: https://api.whatado.io/change-password/${tempToken}\n\n
         It's valid for the next 15 minutes.\n\nThanks,\nWhatado Support`,
         `<b>reset password</b>
@@ -464,7 +420,7 @@ export class UserResolver {
       return {
         errors: [
           {
-            field: "email",
+            field: "phone",
             message: "something went wrong. try again later.",
           },
         ],
