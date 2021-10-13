@@ -20,11 +20,11 @@ export class Forum extends BaseEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Field(() => String)
+  @Field(() => Date)
   @CreateDateColumn()
   createdAt = new Date();
 
-  @Field(() => String)
+  @Field(() => Date)
   @UpdateDateColumn()
   updatedAt = new Date();
 

@@ -82,14 +82,14 @@ export class Event extends BaseEntity {
   @Field(() => [Interest])
   @ManyToMany(() => Interest, (interest) => interest.relatedEvents, {
     cascade: ["update", "insert"],
-    onDelete: "SET NULL",
+    onDelete: "CASCADE",
   })
   @JoinTable()
   relatedInterests: Interest[];
 
   @Field(() => Forum)
   @OneToOne(() => Forum, (forum) => forum.event, {
-    onDelete: "SET NULL",
+    onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   @JoinColumn()

@@ -79,6 +79,7 @@ export class ForumResolver extends BaseEntity {
       const forum = Forum.create({ chats: [], event: { id: eventId } });
       ChatNotification.create({
         forum: forum,
+        lastAccessed: new Date(),
         user: { id: payload!.userId as any },
       });
       return {
@@ -113,6 +114,6 @@ export class ForumResolver extends BaseEntity {
   @FieldResolver()
   chats(@Root() forum: Forum, @Ctx() { chatLoader }: MyContext) {
     if (forum.chats == null) return [];
-    return chatLoader.loadMany(forum.chats.map((chat) => chat.id));
+    return chatLoader.loadMany(forum.chats.slice(0,1).map((chat) => chat.id));
   }
 }

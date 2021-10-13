@@ -5,17 +5,13 @@ import {
   FieldResolver,
   Int,
   Mutation,
-  PubSub,
-  PubSubEngine,
   Query,
   Resolver,
   Root,
-  Subscription,
   UseMiddleware,
 } from "type-graphql";
 import { User } from "../entities/User";
 import argon2 from "argon2";
-import { sendEmail } from "../utils/sendEmail";
 import { isAuth } from "../middleware/isAuth";
 import { UserApiResponse, UsersApiResponse } from "./outputs/modelOutputs";
 import { UserFilterInput, UserInput } from "./inputs/userInputs";
@@ -58,6 +54,33 @@ export class UserResolver {
       return {
         ok: false,
         errors: [{ field: "Remove Account", message: e.message }],
+      };
+    }
+  }
+
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async checkValidation(
+    @Arg("code") code: String,
+    @Ctx() { payload }: MyContext
+  ): Promise<BoolApiResponse> {
+    try {
+      const user = await User.findOneOrFail(payload!.userId);
+      if (user.otp == code) {
+        return {
+          nodes: true,
+          ok: true,
+        };
+      } else {
+        return {
+          nodes: false,
+          ok: false,
+        };
+      }
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "phone", message: e.message }],
       };
     }
   }
@@ -180,12 +203,22 @@ export class UserResolver {
   async register(@Arg("options") options: UserInput): Promise<UserApiResponse> {
     const hashedPassword = await argon2.hash(options.password);
     let user;
+
+    const otpGenerator = require("otp-generator");
+
+    const otp = otpGenerator.generate(5, {
+      digits: true,
+      alphabets: false,
+      upperCase: false,
+      specialChars: false,
+    });
     try {
       user = await User.create({
         password: hashedPassword,
         phone: options.phone,
         name: options.name,
         birthday: options.birthday,
+        otp,
       }).save();
     } catch (e) {
       if (e.code === "23505" || e.detail.includes("already exists"))
@@ -202,6 +235,17 @@ export class UserResolver {
     }
     const accessToken = createAccessToken(user);
     const refreshToken = createRefreshToken(user);
+
+    // send validation text
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const client = require("twilio")(accountSid, authToken);
+    client.messages.create({
+      body: `Your code is ${otp}`,
+      from: "+14352275927",
+      to: `${user.phone}`,
+    });
+
     return { ok: true, nodes: user, jwt: { accessToken, refreshToken } };
   }
 
@@ -259,14 +303,14 @@ export class UserResolver {
       if (!user) {
         return {
           ok: false,
-          errors: [{ field: "phone", message: "phone number not in use" }],
+          errors: [{ field: "login", message: "phone number not in use" }],
         };
       }
       const valid = await argon2.verify(user.password, options.password);
       if (!valid) {
         return {
           ok: false,
-          errors: [{ field: "password", message: "incorrect password" }],
+          errors: [{ field: "login", message: "incorrect password" }],
         };
       }
       const accessToken = createAccessToken(user);
@@ -275,38 +319,9 @@ export class UserResolver {
     } catch (e) {
       return {
         ok: false,
-        errors: [{ field: "phone", message: "please try again later" }],
+        errors: [{ field: "login", message: "please try again later" }],
       };
     }
-  }
-
-  @Subscription(() => String, { topics: "HELLO" })
-  me_sub(@Root() username: String): String {
-    return username;
-  }
-
-  @Mutation(() => BoolApiResponse)
-  @UseMiddleware(isAuth)
-  async changeUsername(
-    @Ctx() { payload }: MyContext,
-    @Arg("username") username: string,
-    @PubSub() pubSub: PubSubEngine
-  ): Promise<BoolApiResponse> {
-    if (!payload) {
-      return {
-        ok: false,
-        errors: [{ message: "uh oh" }],
-      };
-    }
-    const user = await User.findOneOrFail(payload.userId);
-    user.name = username;
-    user.save();
-    await pubSub.publish("HELLO", username);
-
-    return {
-      ok: true,
-      nodes: true,
-    };
   }
 
   @Mutation(() => UserApiResponse)
@@ -322,6 +337,10 @@ export class UserResolver {
       };
     }
     try {
+      if (options["password"] != null) {
+        const hashedPassword = await argon2.hash(options.password);
+        options["password"] = hashedPassword;
+      }
       const themap = new Object({
         ...options,
       });
@@ -381,26 +400,34 @@ export class UserResolver {
 
   @Mutation(() => BoolApiResponse)
   async forgotPassword(@Arg("phone") phone: string): Promise<BoolApiResponse> {
-    const user = await User.findOne({ where: { phone: phone } });
-    if (!user) {
-      return {
-        ok: false,
-        errors: [{ field: "phone", message: "phone not in use" }],
-      };
-    }
     try {
-      const tempToken = createAccessToken(user);
-      await sendEmail(
-        user.phone,
-        `Hi ${user.name},\n\n
-        Please use this link to reset your password: https://api.whatado.io/change-password/${tempToken}\n\n
-        It's valid for the next 15 minutes.\n\nThanks,\nWhatado Support`,
-        `<b>reset password</b>
-        <a href="https://api.whatado.io/change-password/${tempToken}">
-        https://api.whatado.io/change-password/${tempToken}
-        </a>`
-      );
-      return { ok: true };
+      const user = await User.findOneOrFail({ where: { phone: phone } });
+      if (!user) {
+        return {
+          ok: false,
+          errors: [{ field: "phone", message: "phone not in use" }],
+        };
+      }
+      const otpGenerator = require("otp-generator");
+
+      const otp = otpGenerator.generate(5, {
+        digits: true,
+        alphabets: false,
+        upperCase: false,
+        specialChars: false,
+      });
+      user.otp = otp;
+      await user.save();
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const client = require("twilio")(accountSid, authToken);
+      client.messages.create({
+        body: `Your code is ${otp}`,
+        from: "+14352275927",
+        to: `${user.phone}`,
+      });
+
+      return { ok: true, nodes: true };
     } catch (e) {
       console.log(e);
       return {

@@ -157,7 +157,7 @@ export class EventResolver {
     try {
       const cn = await ChatNotification.create({
         user: { id: payload!.userId as any },
-        notifications: 0,
+        lastAccessed: new Date(),
       }).save();
       const forum = await Forum.create({
         userNotifications: [cn],
@@ -284,7 +284,7 @@ export class EventResolver {
       event.invited = [...event.invited, user];
       await event.save();
       const message = {
-        data: {type: "event"},
+        data: { type: "event" },
         notification: {
           title: "You're Invited!",
           body: `You're invited to ${event.title}`,
@@ -293,7 +293,7 @@ export class EventResolver {
       const options = {
         contentAvailable: true,
         priority: "high",
-      }
+      };
       await admin
         .messaging()
         .sendToDevice(user.deviceId, message, options)
@@ -312,6 +312,33 @@ export class EventResolver {
         .catch((error) => {
           console.log("Error subscribing to topic:", error);
         });
+      return { ok: true, nodes: event };
+    } catch (e) {
+      return { ok: false, errors: [{ field: "server", message: e.message }] };
+    }
+  }
+
+  @Mutation(() => EventApiResponse)
+  @UseMiddleware(isAuth)
+  async removeInvite(
+    @Arg("eventId", () => Int) eventId: number,
+    @Arg("userId", () => Int) userId: number
+  ): Promise<EventApiResponse> {
+    try {
+      const user = await User.findOneOrFail(userId);
+      const event = await Event.findOneOrFail(eventId, {
+        relations: [
+          "creator",
+          "relatedInterests",
+          "wannago",
+          "wannago.user",
+          "invited",
+          "forum",
+        ],
+      });
+      const i = event.invited.indexOf(user);
+      event.invited = event.invited.splice(i, 1);
+      await event.save();
       return { ok: true, nodes: event };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };

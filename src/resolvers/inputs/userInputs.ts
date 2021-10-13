@@ -20,6 +20,8 @@ export class UserFilterInput implements Partial<User> {
   @Field({ nullable: true })
   phone?: string;
   @Field({ nullable: true })
+  password?: string;
+  @Field({ nullable: true })
   name?: string;
   @Field({ nullable: true })
   birthday?: Date;

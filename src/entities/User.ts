@@ -40,6 +40,9 @@ export class User extends BaseEntity {
   @Column()
   password!: string;
 
+  @Column({default: ''})
+  otp!: string;
+
   @Field(() => Int)
   @Column({ default: 0 })
   refreshCount!: number;

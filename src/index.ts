@@ -28,6 +28,7 @@ import { createChatLoader } from "./resolvers/loaders/chatLoader";
 import { createForumLoader } from "./resolvers/loaders/forumLoader";
 import { createWannagoLoader } from "./resolvers/loaders/wannagoLoader";
 import * as admin from "firebase-admin";
+import { ChatNotificationResolver } from "./resolvers/chat_notification";
 var serviceAccount = require("../firebase-adminsdk.json");
 
 // import WebSocket from "ws";
@@ -51,6 +52,8 @@ const main = async () => {
   // Event.remove(events);
   // const forums = await Forum.find();
   // Forum.remove(forums);
+  // const users = await User.find();
+  // User.remove(users);
 
   app.get("/get_schema", async (_, res) => {
     return res.download(`${__dirname}/schema.graphql`, "schema.graphql");
@@ -124,6 +127,7 @@ const main = async () => {
       InterestResolver,
       ChatResolver,
       ForumResolver,
+      ChatNotificationResolver,
     ],
     validate: false,
     pubSub,

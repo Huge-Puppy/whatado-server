@@ -2,9 +2,11 @@ import { Field, Int, ObjectType } from "type-graphql";
 import {
   BaseEntity,
   Column,
+  CreateDateColumn,
   Entity,
   ManyToOne,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from "typeorm";
 import { Forum } from "./Forum";
 import { User } from "./User";
@@ -16,9 +18,17 @@ export class ChatNotification extends BaseEntity {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Field(() => Int)
+  @Field(() => Date)
+  @CreateDateColumn()
+  createdAt = new Date();
+
+  @Field(() => Date)
+  @UpdateDateColumn()
+  updatedAt = new Date();
+
+  @Field(() => Date)
   @Column()
-  notifications!: number;
+  lastAccessed!: Date
 
   @Field(() => Boolean)
   @Column({ default: false })
