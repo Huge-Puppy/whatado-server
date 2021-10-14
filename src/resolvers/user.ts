@@ -176,7 +176,7 @@ export class UserResolver {
         errors: [
           {
             field: "add interests",
-            message: e.toString,
+            message: e.message,
           },
         ],
       };
@@ -250,6 +250,42 @@ export class UserResolver {
   }
 
   @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async sendCode(@Ctx() { payload }: MyContext) {
+    try {
+      const otpGenerator = require("otp-generator");
+
+      const otp = otpGenerator.generate(5, {
+        digits: true,
+        alphabets: false,
+        upperCase: false,
+        specialChars: false,
+      });
+
+      const user = await User.findOneOrFail(payload?.userId);
+      user.otp = otp;
+      await user.save();
+      // send validation text
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const client = require("twilio")(accountSid, authToken);
+      client.messages.create({
+        body: `Your code is ${otp}`,
+        from: "+14352275927",
+        to: `${user.phone}`,
+      });
+      return {
+        ok: true,
+        nodes: true,
+      };
+    } catch (e) {
+      return {
+        errors: [{ field: "text", message: e.message }],
+      };
+    }
+  }
+
+  @Mutation(() => BoolApiResponse)
   async blockUser(
     @Arg("userId", () => Int) userId: number,
     @Ctx() { payload }: MyContext
@@ -319,7 +355,12 @@ export class UserResolver {
     } catch (e) {
       return {
         ok: false,
-        errors: [{ field: "login", message: "something went wrong. please try again later" }],
+        errors: [
+          {
+            field: "login",
+            message: "something went wrong. please try again later",
+          },
+        ],
       };
     }
   }
