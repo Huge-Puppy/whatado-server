@@ -229,7 +229,7 @@ export class UserResolver {
       return {
         ok: false,
         errors: [
-          { message: "unexpected error, try again later", field: "name" },
+          { message: "unexpected error, try again later", field: "phone" },
         ],
       };
     }
@@ -303,7 +303,7 @@ export class UserResolver {
       if (!user) {
         return {
           ok: false,
-          errors: [{ field: "login", message: "phone number not in use" }],
+          errors: [{ field: "phone", message: "phone number not in use" }],
         };
       }
       const valid = await argon2.verify(user.password, options.password);
@@ -319,7 +319,7 @@ export class UserResolver {
     } catch (e) {
       return {
         ok: false,
-        errors: [{ field: "login", message: "please try again later" }],
+        errors: [{ field: "login", message: "something went wrong. please try again later" }],
       };
     }
   }
