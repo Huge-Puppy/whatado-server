@@ -27,8 +27,14 @@ export class UserResolver {
   async me(@Ctx() { payload }: MyContext): Promise<UserApiResponse> {
     try {
       const user = await User.findOneOrFail(payload?.userId, {
-        relations: ["interests", "chatNotifications", "myEvents", "blockedUsers"],
+        relations: [
+          "interests",
+          "chatNotifications",
+          "myEvents",
+          "blockedUsers",
+        ],
       });
+      console.log(user);
       return {
         nodes: user,
         ok: true,
@@ -285,15 +291,52 @@ export class UserResolver {
     }
   }
 
+   @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async unblockUser(
+    @Arg("userId", () => Int) userId: number,
+    @Ctx() { payload }: MyContext
+  ): Promise<BoolApiResponse> {
+    try {
+      var user = await User.findOneOrFail(payload?.userId, {
+        relations: [
+          "interests",
+          "chatNotifications",
+          "myEvents",
+          "blockedUsers",
+        ],
+      });
+      user.blockedUsers = user.blockedUsers.filter((u) => u.id != userId);
+      await user.save();
+      return {
+        ok: true,
+        nodes: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "flag user", message: e.message }],
+      };
+    }
+  }
+
   @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
   async blockUser(
     @Arg("userId", () => Int) userId: number,
     @Ctx() { payload }: MyContext
   ): Promise<BoolApiResponse> {
     try {
       var userToBlock = await User.findOneOrFail(userId);
-      var user = await User.findOneOrFail(payload?.userId);
-      user.blockedUsers.push(userToBlock);
+      var user = await User.findOneOrFail(payload?.userId, {
+        relations: [
+          "interests",
+          "chatNotifications",
+          "myEvents",
+          "blockedUsers",
+        ],
+      });
+      user.blockedUsers = [...user.blockedUsers, userToBlock];
       await user.save();
       return {
         ok: true,
@@ -488,8 +531,8 @@ export class UserResolver {
     );
   }
   @FieldResolver()
-  blockedUsers(@Root() user: User) {
-    return user.blockedUsers.map((user) => { id: user.id});
+  blockedUsers(@Root() user: User, @Ctx() { userLoader }: MyContext) {
+    return userLoader.loadMany(user.blockedUsers.map((user) => user.id));
   }
   @FieldResolver()
   chatNotifications(

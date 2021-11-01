@@ -15,7 +15,7 @@ import { isAuth } from "../middleware/isAuth";
 import { ChatNotification } from "../entities/ChatNotification";
 import { BoolApiResponse } from "./outputs/general";
 import * as admin from "firebase-admin";
-import { User } from "src/entities/User";
+import { User } from "../entities/User";
 
 @Resolver(() => ChatNotification)
 export class ChatNotificationResolver {
