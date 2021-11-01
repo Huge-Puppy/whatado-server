@@ -27,7 +27,7 @@ export class UserResolver {
   async me(@Ctx() { payload }: MyContext): Promise<UserApiResponse> {
     try {
       const user = await User.findOneOrFail(payload?.userId, {
-        relations: ["interests", "chatNotifications", "myEvents"],
+        relations: ["interests", "chatNotifications", "myEvents", "blockedUsers"],
       });
       return {
         nodes: user,
@@ -486,6 +486,10 @@ export class UserResolver {
     return interestLoader.loadMany(
       user.interests.map((interest) => interest.id)
     );
+  }
+  @FieldResolver()
+  blockedUsers(@Root() user: User) {
+    return user.blockedUsers.map((user) => { id: user.id});
   }
   @FieldResolver()
   chatNotifications(

@@ -163,6 +163,7 @@ export class EventResolver {
         userNotifications: [cn],
         chats: [],
       }).save();
+      const user = await User.findOneOrFail(options.creatorId);
       const relatedInterests = options.relatedInterestsIds.map((id) => ({
         id: id,
       }));
@@ -176,7 +177,7 @@ export class EventResolver {
         filterAge: options.filterAge,
         filterGender: options.filterGender,
         filterRadius: options.filterRadius,
-        creator: { id: options.creatorId },
+        creator: user,
         wannago: [],
         invited: [],
         relatedInterests,
@@ -184,7 +185,7 @@ export class EventResolver {
       }).save();
       await admin
         .messaging()
-        .subscribeToTopic([payload!.userId], `${forum.id}`)
+        .subscribeToTopic([user.deviceId], `${forum.id}`)
         .then((response) => {
           console.log("Successfully subscribed to topic:", response);
         })
@@ -338,7 +339,18 @@ export class EventResolver {
       });
       const i = event.invited.indexOf(user);
       event.invited = event.invited.splice(i, 1);
+      const wi = event.wannago.findIndex((wannago, _, __) => wannago.user.id == userId);
+      event.wannago = event.wannago.splice(wi, 1);
       await event.save();
+      await admin
+        .messaging()
+        .unsubscribeFromTopic([user.deviceId], `${event.forum.id}`)
+        .then((response) => {
+          console.log("Successfully subscribed to topic:", response);
+        })
+        .catch((error) => {
+          console.log("Error subscribing to topic:", error);
+        });
       return { ok: true, nodes: event };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
