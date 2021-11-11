@@ -145,7 +145,10 @@ export class ChatResolver extends BaseEntity {
     @PubSub() pubSub: PubSubEngine
   ): Promise<ChatApiResponse> {
     try {
-      const forum = await Forum.findOneOrFail({ id: chatOptions.forumId });
+      const forum = await Forum.findOneOrFail(
+        { id: chatOptions.forumId },
+        { relations: ["userNotifications", "userNotifications.user"] }
+      );
       const author = await User.findOneOrFail({ id: chatOptions.authorId });
       const chat = await Chat.create({
         text: chatOptions.text,
@@ -153,7 +156,6 @@ export class ChatResolver extends BaseEntity {
         forum,
       }).save();
 
-      // console.log('jcl', forum.event.id);
       await pubSub.publish(`${chatOptions.forumId}`, chat);
       const message = {
         data: {
@@ -175,7 +177,13 @@ export class ChatResolver extends BaseEntity {
       };
       await admin
         .messaging()
-        .sendToTopic(`${chatOptions.forumId}`, message, options)
+        .sendToDevice(
+          forum.userNotifications
+            .filter((un) => !un.muted && un.user.deviceId != author.deviceId)
+            .map((un) => un.user.deviceId),
+          message,
+          options
+        )
         .then((response) => {
           console.log("Successfully sent message:", response);
         })

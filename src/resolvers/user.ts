@@ -291,7 +291,7 @@ export class UserResolver {
     }
   }
 
-   @Mutation(() => BoolApiResponse)
+  @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async unblockUser(
     @Arg("userId", () => Int) userId: number,

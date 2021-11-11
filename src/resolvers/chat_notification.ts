@@ -14,8 +14,6 @@ import { ChatNotificationsApiResponse } from "./outputs/modelOutputs";
 import { isAuth } from "../middleware/isAuth";
 import { ChatNotification } from "../entities/ChatNotification";
 import { BoolApiResponse } from "./outputs/general";
-import * as admin from "firebase-admin";
-import { User } from "../entities/User";
 
 @Resolver(() => ChatNotification)
 export class ChatNotificationResolver {
@@ -42,22 +40,11 @@ export class ChatNotificationResolver {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async mute(@Arg("id", () => Int) id: number,
-  @Ctx() { payload }: MyContext): Promise<BoolApiResponse> {
+  async mute(@Arg("id", () => Int) id: number): Promise<BoolApiResponse> {
     try {
-      const user = await User.findOneOrFail(payload!.userId);
       const cn = await ChatNotification.findOneOrFail(id);
       cn.muted = true;
       cn.save();
-      await admin
-        .messaging()
-        .unsubscribeFromTopic([user.deviceId], `${cn.forum.id}`)
-        .then((response) => {
-          console.log("Successfully subscribed to topic:", response);
-        })
-        .catch((error) => {
-          console.log("Error subscribing to topic:", error);
-        });
       return { ok: true, nodes: true };
     } catch (e) {
       return {
@@ -74,22 +61,13 @@ export class ChatNotificationResolver {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async unmute(@Arg("id", () => Int) id: number,
-  @Ctx() { payload }: MyContext): Promise<BoolApiResponse> {
+  async unmute(
+    @Arg("id", () => Int) id: number,
+  ): Promise<BoolApiResponse> {
     try {
-      const user = await User.findOneOrFail(payload!.userId);
       const cn = await ChatNotification.findOneOrFail(id);
       cn.muted = false;
       cn.save();
-      await admin
-        .messaging()
-        .subscribeToTopic([user.deviceId], `${cn.forum.id}`)
-        .then((response) => {
-          console.log("Successfully subscribed to topic:", response);
-        })
-        .catch((error) => {
-          console.log("Error subscribing to topic:", error);
-        });
       return { ok: true, nodes: true };
     } catch (e) {
       return {

@@ -134,7 +134,18 @@ export class EventResolver {
   @UseMiddleware(isAuth)
   async event(@Arg("id", () => Int) id: number): Promise<EventApiResponse> {
     try {
-      return { ok: true, nodes: await Event.findOne(id) };
+      return {
+        ok: true,
+        nodes: await Event.findOneOrFail(id, {
+          relations: [
+            "relatedInterests",
+            "creator",
+            "wannago",
+            "wannago.user",
+            "invited",
+          ],
+        }),
+      };
     } catch (e) {
       return {
         ok: false,
@@ -183,15 +194,6 @@ export class EventResolver {
         relatedInterests,
         forum: forum,
       }).save();
-      await admin
-        .messaging()
-        .subscribeToTopic([user.deviceId], `${forum.id}`)
-        .then((response) => {
-          console.log("Successfully subscribed to topic:", response);
-        })
-        .catch((error) => {
-          console.log("Error subscribing to topic:", error);
-        });
       return { ok: true, nodes: event };
     } catch (e) {
       return {
@@ -285,7 +287,10 @@ export class EventResolver {
       event.invited = [...event.invited, user];
       await event.save();
       const message = {
-        data: { type: "event" },
+        data: {
+          type: "event",
+          eventId: `${event.id}`,
+        },
         notification: {
           title: "You're Invited!",
           body: `You're invited to ${event.title}`,
@@ -303,15 +308,6 @@ export class EventResolver {
         })
         .catch((error) => {
           console.log("Error sending message:", error);
-        });
-      await admin
-        .messaging()
-        .subscribeToTopic([user.deviceId], `${event.forum.id}`)
-        .then((response) => {
-          console.log("Successfully subscribed to topic:", response);
-        })
-        .catch((error) => {
-          console.log("Error subscribing to topic:", error);
         });
       return { ok: true, nodes: event };
     } catch (e) {
@@ -339,18 +335,11 @@ export class EventResolver {
       });
       const i = event.invited.indexOf(user);
       event.invited = event.invited.splice(i, 1);
-      const wi = event.wannago.findIndex((wannago, _, __) => wannago.user.id == userId);
+      const wi = event.wannago.findIndex(
+        (wannago, _, __) => wannago.user.id == userId
+      );
       event.wannago = event.wannago.splice(wi, 1);
       await event.save();
-      await admin
-        .messaging()
-        .unsubscribeFromTopic([user.deviceId], `${event.forum.id}`)
-        .then((response) => {
-          console.log("Successfully subscribed to topic:", response);
-        })
-        .catch((error) => {
-          console.log("Error subscribing to topic:", error);
-        });
       return { ok: true, nodes: event };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
@@ -378,6 +367,27 @@ export class EventResolver {
           "invited",
         ],
       });
+      const message = {
+        data: { type: "event", eventId: `${event.id}` },
+        notification: {
+          title: "Event Activity",
+          body: `Someone wants to go to your event!`,
+        },
+      };
+      const options = {
+        contentAvailable: true,
+        priority: "high",
+      };
+      await admin
+        .messaging()
+        .sendToDevice(event.creator.deviceId, message, options)
+        .then((response) => {
+          console.log("Successfully sent message:", response);
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
+
       return { ok: true, nodes: event };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };

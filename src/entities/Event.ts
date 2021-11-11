@@ -36,8 +36,9 @@ export class Event extends BaseEntity {
   updatedAt = new Date();
 
   @Field()
-  @Column()
+  @Column({type: "timestamptz"})
   time: Date;
+
 
   @Field()
   @Column({ default: "" })

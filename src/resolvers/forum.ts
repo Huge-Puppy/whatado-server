@@ -22,8 +22,10 @@ export class ForumResolver extends BaseEntity {
   @UseMiddleware(isAuth)
   async forum(@Arg("id", () => Int) id: number): Promise<ForumApiResponse> {
     try {
-      const forum = await Forum.findOneOrFail(id);
-      return { nodes: forum };
+      const forum = await Forum.findOneOrFail(id, {
+        relations: ["chats", "event", "userNotifications"],
+      });
+      return { ok: true, nodes: forum };
     } catch (e) {
       return {
         ok: false,
@@ -37,7 +39,7 @@ export class ForumResolver extends BaseEntity {
   @Query(() => ForumsApiResponse)
   @UseMiddleware(isAuth)
   async forumsByEventId(
-    @Arg("ids", () => [Int!]!) ids: number[],
+    @Arg("ids", () => [Int!]!) ids: number[]
     // @Ctx() { payload }: MyContext
   ): Promise<ForumsApiResponse> {
     // TODO: only get usernotifications for the logged in user in field resolver
@@ -100,7 +102,7 @@ export class ForumResolver extends BaseEntity {
     @Root() forum: Forum,
     @Ctx() { chatNotificationLoader }: MyContext
   ) {
-    const val =  await chatNotificationLoader.loadMany(
+    const val = await chatNotificationLoader.loadMany(
       forum.userNotifications.map((cn) => cn.id)
     );
     return val;
@@ -114,6 +116,6 @@ export class ForumResolver extends BaseEntity {
   @FieldResolver()
   chats(@Root() forum: Forum, @Ctx() { chatLoader }: MyContext) {
     if (forum.chats == null) return [];
-    return chatLoader.loadMany(forum.chats.slice(0,1).map((chat) => chat.id));
+    return chatLoader.loadMany(forum.chats.slice(0, 1).map((chat) => chat.id));
   }
 }
