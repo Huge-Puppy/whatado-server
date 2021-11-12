@@ -322,7 +322,21 @@ export class EventResolver {
     @Arg("userId", () => Int) userId: number
   ): Promise<EventApiResponse> {
     try {
-      const user = await User.findOneOrFail(userId);
+      const wannago = await Wannago.createQueryBuilder("Wannago")
+        .leftJoinAndSelect("Wannago.user", "Wannago__user")
+        .leftJoinAndSelect("Wannago.event", "Wannago__event")
+        .relation("user")
+        .relation("event")
+        .select()
+        .where("Wannago__user.id = :userId", { userId })
+        .orWhere("Wannago__event.id = :eventId", {
+          eventId,
+        })
+        .getOneOrFail();
+
+      wannago.declined = true;
+      await wannago.save();
+
       const event = await Event.findOneOrFail(eventId, {
         relations: [
           "creator",
@@ -333,12 +347,10 @@ export class EventResolver {
           "forum",
         ],
       });
-      const i = event.invited.indexOf(user);
-      event.invited = event.invited.splice(i, 1);
-      const wi = event.wannago.findIndex(
-        (wannago, _, __) => wannago.user.id == userId
-      );
-      event.wannago = event.wannago.splice(wi, 1);
+      const i = event.invited.findIndex((u) => u.id == userId);
+      event.invited.splice(i, 1);
+      const wi = event.wannago.findIndex((w) => w.user.id == userId);
+      event.wannago[wi] = wannago;
       await event.save();
       return { ok: true, nodes: event };
     } catch (e) {
