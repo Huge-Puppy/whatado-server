@@ -4,3 +4,5 @@ yarn.lock
 package-lock.json
 .env*
 firebase-adminsdk.json
+ormconfig.json
+
