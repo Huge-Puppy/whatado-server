@@ -34,7 +34,6 @@ export class UserResolver {
           "blockedUsers",
         ],
       });
-      console.log(user);
       return {
         nodes: user,
         ok: true,
@@ -60,6 +59,32 @@ export class UserResolver {
       return {
         ok: false,
         errors: [{ field: "Remove Account", message: e.message }],
+      };
+    }
+  }
+
+  @Mutation(() => BoolApiResponse)
+  async checkValidationLogin(
+    @Arg("code") code: String,
+    @Arg("phone") phone: String,
+  ): Promise<BoolApiResponse> {
+    try {
+      const user = await User.findOneOrFail({where: {phone}});
+      if (user.otp == code) {
+      const accessToken = createAccessToken(user);
+      const refreshToken = createRefreshToken(user);
+      return { ok: true, nodes: true, jwt: { accessToken, refreshToken } };
+      } else {
+        return {
+          nodes: false,
+          ok: false,
+        };
+      }
+    } catch (e) {
+      return {
+        ok: false,
+        nodes: false,
+        errors: [{ field: "phone", message: e.message }],
       };
     }
   }

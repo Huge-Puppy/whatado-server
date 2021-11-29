@@ -178,7 +178,6 @@ export class EventResolver {
       const relatedInterests = options.relatedInterestsIds.map((id) => ({
         id: id,
       }));
-      console.log("saving interests", relatedInterests);
       const event = await Event.create({
         time: options.time,
         location: options.location,

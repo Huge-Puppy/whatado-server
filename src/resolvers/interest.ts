@@ -94,7 +94,6 @@ export class InterestResolver extends BaseEntity {
     @Arg("interestsText", () => [String]) interestsText: string[]
   ): Promise<IntsApiResponse> {
     try {
-      console.log("interests ids ", interestsText);
       const oldInterests = await Interest.find({
         where: { title: In(interestsText) },
       });
@@ -112,10 +111,6 @@ export class InterestResolver extends BaseEntity {
           }))
         )
         .execute();
-      console.log("returning ", [
-        ...newInterests.identifiers.map((obj) => obj.id),
-        ...oldInterests.map((obj) => obj.id),
-      ]);
 
       return {
         ok: true,
