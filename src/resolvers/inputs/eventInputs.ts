@@ -28,8 +28,10 @@ export class EventInput implements Partial<Event>{
   filterRadius: number;
   @Field(() => Gender)
   filterGender: Gender;
-  @Field()
-  filterAge: string;
+  @Field(() => Int)
+  filterMinAge: number;
+  @Field(() => Int)
+  filterMaxAge: number;
   @Field(() => Int)
   creatorId: number;
 }
@@ -59,7 +61,9 @@ export class EventFilterInput implements Partial<Event>{
   @Field(() => Gender, { nullable: true })
   filterGender?: Gender;
   @Field({ nullable: true })
-  filterAge?: string;
+  filterMinAge?: number;
+  @Field({ nullable: true })
+  filterMaxAge?: number;
   @Field(() => Int, { nullable: true })
   creatorId?: number;
   @Field(() => [Int], { nullable: true })

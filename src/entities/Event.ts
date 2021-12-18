@@ -108,7 +108,11 @@ export class Event extends BaseEntity {
   @Column({ type: "enum", enum: Gender, default: Gender.BOTH })
   filterGender!: Gender;
 
-  @Field()
-  @Column({ default: "" })
-  filterAge!: string;
+  @Field(() => Int)
+  @Column({ default: 18 })
+  filterMinAge!: number;
+
+  @Field(() => Int)
+  @Column({ default: 40 })
+  filterMaxAge!: number;
 }

@@ -23,9 +23,15 @@ export type MyContext = {
 };
 
 export enum Gender {
-  FEMALE = "girls",
-  MALE = "boys",
+  FEMALE = "female",
+  MALE = "male",
   BOTH = "both",
 }
 
+export enum SortType {
+  NEWEST = "newest",
+  SOONEST = "soonest",
+}
+
 registerEnumType(Gender, { name: "Gender" });
+registerEnumType(SortType, { name: "SortType" });

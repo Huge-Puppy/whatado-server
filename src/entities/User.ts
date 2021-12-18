@@ -13,6 +13,7 @@ import { Field, Int, ObjectType } from "type-graphql";
 import { Event } from "./Event";
 import { Interest } from "./Interest";
 import { ChatNotification } from "./ChatNotification";
+import { Gender } from "../types";
 
 @ObjectType()
 @Entity()
@@ -40,23 +41,27 @@ export class User extends BaseEntity {
   @Column()
   password!: string;
 
-  @Column({default: ''})
+  @Column({ default: "" })
   otp!: string;
 
   @Field(() => Int)
   @Column({ default: 0 })
   refreshCount!: number;
 
+  @Field(() => Gender)
+  @Column({ type: "enum", enum: Gender })
+  gender!: Gender;
+
   @Field()
   @Column()
   birthday!: Date;
 
   @Field()
-  @Column({default: ''})
+  @Column({ default: "" })
   deviceId!: string;
 
   @Field()
-  @Column({ default: '[]' })
+  @Column({ default: "[]" })
   photoUrls!: string;
 
   @Field(() => Int)
@@ -86,6 +91,29 @@ export class User extends BaseEntity {
   })
   @JoinTable()
   blockedUsers: User[];
+
+  @Field(() => [User])
+  @ManyToMany(() => User, (u) => u.friends, {
+    onDelete: "CASCADE",
+    cascade: ["insert", "update"],
+  })
+  @JoinTable()
+  friends: User[];
+
+  @Field(() => [User])
+  @ManyToMany(() => User, (u) => u.friendRequests, {
+    onDelete: "CASCADE",
+    cascade: ["insert", "update"],
+  })
+  @JoinTable()
+  requestedFriends: User[];
+
+  @Field(() => [User])
+  @ManyToMany(() => User, (u) => u.requestedFriends, {
+    onDelete: "CASCADE",
+    cascade: ["insert", "update"],
+  })
+  friendRequests: User[];
 
   @Field(() => [Event])
   @OneToMany(() => Event, (event) => event.creator, {

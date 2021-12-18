@@ -16,11 +16,17 @@ import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
 import { Forum } from "../entities/Forum";
 import { User } from "../entities/User";
-import { MyContext } from "../types";
+import { Gender, MyContext, SortType } from "../types";
 import { ChatNotification } from "../entities/ChatNotification";
 import { Wannago } from "../entities/Wannago";
 import { DateRangeInput } from "./inputs/general";
-import { Between, MoreThan } from "typeorm";
+import {
+  Between,
+  Equal,
+  MoreThan,
+  MoreThanOrEqual,
+  LessThanOrEqual,
+} from "typeorm";
 import * as admin from "firebase-admin";
 
 @Resolver(() => Event)
@@ -53,17 +59,41 @@ export class EventResolver {
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
   async events(
+    @Ctx() { payload }: MyContext,
     @Arg("dateRange", () => DateRangeInput) dateRange: DateRangeInput,
     @Arg("take", () => Int) take: number,
-    @Arg("skip", () => Int) skip: number
+    @Arg("skip", () => Int) skip: number,
+    @Arg("sortType", () => SortType) sortType: SortType
   ): Promise<EventsApiResponse> {
     try {
+      const me = await User.findOneOrFail(payload!.userId);
+      //calculate birthday
+      const now = new Date();
+      var age = now.getFullYear() - me.birthday.getFullYear();
+      if (now.getMonth() < me.birthday.getMonth()) {
+        age--;
+      } else if (now.getMonth() == me.birthday.getMonth()) {
+        if (now.getDay() < me.birthday.getDay()) {
+          age--;
+        }
+      }
+      // get events filtered
       const events = await Event.find({
-        where: {
+        where: [{
           time: Between(dateRange.startDate, dateRange.endDate),
+          filterGender: Equal(me.gender),
+          filterMinAge: LessThanOrEqual(age),
+          filterMaxAge: MoreThanOrEqual(age),
         },
+      {
+          time: Between(dateRange.startDate, dateRange.endDate),
+          filterGender: Equal(Gender.BOTH),
+          filterMinAge: LessThanOrEqual(age),
+          filterMaxAge: MoreThanOrEqual(age),
+      }],
         order: {
-          time: "ASC",
+          createdAt: sortType === SortType.NEWEST ? "DESC" : undefined,
+          time: sortType === SortType.SOONEST ? "ASC" : undefined,
         },
         skip: skip,
         take: take,
@@ -178,13 +208,15 @@ export class EventResolver {
       const relatedInterests = options.relatedInterestsIds.map((id) => ({
         id: id,
       }));
+      console.log(options);
       const event = await Event.create({
         time: options.time,
         location: options.location,
         pictureUrl: options.pictureUrl,
         title: options.title,
         description: options.description,
-        filterAge: options.filterAge,
+        filterMinAge: options.filterMinAge,
+        filterMaxAge: options.filterMaxAge,
         filterGender: options.filterGender,
         filterRadius: options.filterRadius,
         creator: user,

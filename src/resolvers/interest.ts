@@ -8,7 +8,7 @@ import {
   Root,
   UseMiddleware,
 } from "type-graphql";
-import { BaseEntity, In, Like } from "typeorm";
+import { BaseEntity, ILike, In } from "typeorm";
 import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
 import { Interest } from "../entities/Interest";
@@ -52,7 +52,7 @@ export class InterestResolver extends BaseEntity {
       const interests = await Interest.find({
         take: 5,
         where: {
-          title: Like(`%${partial}%`),
+          title: ILike(`%${partial}%`),
         },
       });
       return { ok: true, nodes: interests };

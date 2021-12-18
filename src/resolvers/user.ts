@@ -18,7 +18,7 @@ import { UserFilterInput, UserInput } from "./inputs/userInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { createAccessToken, createRefreshToken } from "../auth";
 import { Interest } from "../entities/Interest";
-import { In, MoreThan } from "typeorm";
+import { ILike, In, MoreThan } from "typeorm";
 
 @Resolver(() => User)
 export class UserResolver {
@@ -32,6 +32,9 @@ export class UserResolver {
           "chatNotifications",
           "myEvents",
           "blockedUsers",
+          "friends",
+          "requestedFriends",
+          "friendRequests",
         ],
       });
       return {
@@ -66,14 +69,14 @@ export class UserResolver {
   @Mutation(() => BoolApiResponse)
   async checkValidationLogin(
     @Arg("code") code: String,
-    @Arg("phone") phone: String,
+    @Arg("phone") phone: String
   ): Promise<BoolApiResponse> {
     try {
-      const user = await User.findOneOrFail({where: {phone}});
+      const user = await User.findOneOrFail({ where: { phone } });
       if (user.otp == code) {
-      const accessToken = createAccessToken(user);
-      const refreshToken = createRefreshToken(user);
-      return { ok: true, nodes: true, jwt: { accessToken, refreshToken } };
+        const accessToken = createAccessToken(user);
+        const refreshToken = createRefreshToken(user);
+        return { ok: true, nodes: true, jwt: { accessToken, refreshToken } };
       } else {
         return {
           nodes: false,
@@ -142,6 +145,25 @@ export class UserResolver {
   async users(): Promise<UsersApiResponse> {
     try {
       const users = await User.find();
+      return { ok: true, nodes: users };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Users", message: e.message }],
+      };
+    }
+  }
+
+  @Query(() => UsersApiResponse)
+  @UseMiddleware(isAuth)
+  async searchUsers(
+    @Arg("partial", () => String) partial: String
+  ): Promise<UsersApiResponse> {
+    try {
+      const users = await User.find({
+        where: { name: ILike(`%${partial}%`) },
+        take: 50,
+      });
       return { ok: true, nodes: users };
     } catch (e) {
       return {
@@ -230,6 +252,25 @@ export class UserResolver {
     }
   }
 
+  @Query(() => UsersApiResponse)
+  @UseMiddleware(isAuth)
+  async friendsById(@Arg("id", () => Int) id: number) {
+    try {
+      const me = await User.findOneOrFail(id, {
+        relations: ["friends"],
+      });
+      return {
+        ok: true,
+        nodes: me.friends,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Friends", message: e.message }],
+      };
+    }
+  }
+
   @Mutation(() => UserApiResponse)
   async register(@Arg("options") options: UserInput): Promise<UserApiResponse> {
     const hashedPassword = await argon2.hash(options.password);
@@ -249,6 +290,7 @@ export class UserResolver {
         phone: options.phone,
         name: options.name,
         birthday: options.birthday,
+        gender: options.gender,
         otp,
       }).save();
     } catch (e) {
@@ -549,16 +591,101 @@ export class UserResolver {
       };
     }
   }
+
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async requestFriend(
+    @Ctx() { payload }: MyContext,
+    @Arg("id", () => Int) id: number
+  ) {
+    try {
+      const me = await User.findOneOrFail(payload!.userId, {
+        relations: ["requestedFriends"],
+      });
+      const other = await User.findOneOrFail(id);
+      me.requestedFriends = [...me.requestedFriends, other];
+      await me.save();
+      return {
+        ok: true,
+        nodes: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Friend", message: e.message }],
+      };
+    }
+  }
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async unrequestFriend(
+    @Ctx() { payload }: MyContext,
+    @Arg("id", () => Int) id: number
+  ) {
+    try {
+      const me = await User.findOneOrFail(payload!.userId, {
+        relations: ["requestedFriends"],
+      });
+      me.requestedFriends = me.requestedFriends.filter(
+        (user, _, __) => user.id != id
+      );
+      await me.save();
+      return {
+        ok: true,
+        nodes: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Friend", message: e.message }],
+      };
+    }
+  }
+
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async acceptFriend(
+    @Ctx() { payload }: MyContext,
+    @Arg("id", () => Int) id: number
+  ) {
+    try {
+      const me = await User.findOneOrFail(payload!.userId, {
+        relations: ["requestedFriends", "friends"],
+      });
+      const other = await User.findOneOrFail(id);
+      me.requestedFriends = me.requestedFriends.filter(
+        (user, _, __) => user.id != id
+      );
+      me.friends = [...me.friends, other];
+      await me.save();
+      return {
+        ok: true,
+        nodes: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Friend", message: e.message }],
+      };
+    }
+  }
   @FieldResolver()
   interests(@Root() user: User, @Ctx() { interestLoader }: MyContext) {
     return interestLoader.loadMany(
       user.interests.map((interest) => interest.id)
     );
   }
+
   @FieldResolver()
   blockedUsers(@Root() user: User, @Ctx() { userLoader }: MyContext) {
     return userLoader.loadMany(user.blockedUsers.map((user) => user.id));
   }
+
+  @FieldResolver()
+  friends(@Root() user: User, @Ctx() { userLoader }: MyContext) {
+    return userLoader.loadMany(user.friends.map((user) => user.id));
+  }
+
   @FieldResolver()
   chatNotifications(
     @Root() user: User,
