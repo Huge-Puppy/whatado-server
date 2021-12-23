@@ -93,12 +93,19 @@ export class User extends BaseEntity {
   blockedUsers: User[];
 
   @Field(() => [User])
-  @ManyToMany(() => User, (u) => u.friends, {
+  @ManyToMany(() => User, (u) => u.inverseFriends, {
     onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   @JoinTable()
   friends: User[];
+
+  @Field(() => [User])
+  @ManyToMany(() => User, (u) => u.friends, {
+    onDelete: "CASCADE",
+    cascade: ["insert", "update"],
+  })
+  inverseFriends: User[];
 
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.friendRequests, {

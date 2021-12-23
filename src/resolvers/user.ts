@@ -33,6 +33,7 @@ export class UserResolver {
           "myEvents",
           "blockedUsers",
           "friends",
+          "inverseFriends",
           "requestedFriends",
           "friendRequests",
         ],
@@ -257,11 +258,11 @@ export class UserResolver {
   async friendsById(@Arg("id", () => Int) id: number) {
     try {
       const me = await User.findOneOrFail(id, {
-        relations: ["friends"],
+        relations: ["friends", "inverseFriends"],
       });
       return {
         ok: true,
-        nodes: me.friends,
+        nodes: [...me.friends, ...me.inverseFriends],
       };
     } catch (e) {
       return {
@@ -650,13 +651,41 @@ export class UserResolver {
   ) {
     try {
       const me = await User.findOneOrFail(payload!.userId, {
-        relations: ["requestedFriends", "friends"],
+        relations: ["friendRequests", "friends"],
       });
       const other = await User.findOneOrFail(id);
-      me.requestedFriends = me.requestedFriends.filter(
+      me.friendRequests = me.friendRequests.filter(
         (user, _, __) => user.id != id
       );
       me.friends = [...me.friends, other];
+      await me.save();
+      return {
+        ok: true,
+        nodes: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Friend", message: e.message }],
+      };
+    }
+  }
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async unfriend(
+    @Ctx() { payload }: MyContext,
+    @Arg("id", () => Int) id: number
+  ) {
+    try {
+      const me = await User.findOneOrFail(payload!.userId, {
+        relations: ["friends", "inverseFriends"],
+      });
+      me.friends = me.friends.filter(
+        (user, _, __) => user.id != id
+      );
+      me.inverseFriends = me.inverseFriends.filter(
+        (user, _, __) => user.id != id
+      );
       await me.save();
       return {
         ok: true,
