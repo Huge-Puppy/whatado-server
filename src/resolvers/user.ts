@@ -19,6 +19,7 @@ import { BoolApiResponse } from "./outputs/general";
 import { createAccessToken, createRefreshToken } from "../auth";
 import { Interest } from "../entities/Interest";
 import { ILike, In, MoreThan } from "typeorm";
+import * as admin from "firebase-admin";
 
 @Resolver(() => User)
 export class UserResolver {
@@ -606,6 +607,26 @@ export class UserResolver {
       const other = await User.findOneOrFail(id);
       me.requestedFriends = [...me.requestedFriends, other];
       await me.save();
+      const message = {
+        data: { type: "friend", userId: `${me.id}` },
+        notification: {
+          title: "New Friend Request",
+          body: `${me.name} sent you a friend request`,
+        },
+      };
+      const options = {
+        contentAvailable: true,
+        priority: "high",
+      };
+      await admin
+        .messaging()
+        .sendToDevice(other.deviceId, message, options)
+        .then((response) => {
+          console.log("Successfully sent message:", response);
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
       return {
         ok: true,
         nodes: true,
@@ -659,6 +680,28 @@ export class UserResolver {
       );
       me.friends = [...me.friends, other];
       await me.save();
+
+      const message = {
+        data: { type: "friend", userId: `${me.id}` },
+        notification: {
+          title: "New Friend",
+          body: `${me.name} is now your friend!`,
+        },
+      };
+      const options = {
+        contentAvailable: true,
+        priority: "high",
+      };
+      await admin
+        .messaging()
+        .sendToDevice(other.deviceId, message, options)
+        .then((response) => {
+          console.log("Successfully sent message:", response);
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
+
       return {
         ok: true,
         nodes: true,
@@ -680,9 +723,7 @@ export class UserResolver {
       const me = await User.findOneOrFail(payload!.userId, {
         relations: ["friends", "inverseFriends"],
       });
-      me.friends = me.friends.filter(
-        (user, _, __) => user.id != id
-      );
+      me.friends = me.friends.filter((user, _, __) => user.id != id);
       me.inverseFriends = me.inverseFriends.filter(
         (user, _, __) => user.id != id
       );
