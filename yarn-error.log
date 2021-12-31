@@ -36,7 +36,7 @@ npm manifest:
           "tsc": "tsc",
           "watch": "tsc -w",
           "dev": "cross-env NODE_ENV=local-dev nodemon dist/index.js",
-          "start": "cross-env NODE_ENV=prod node dist/index.js"
+          "start": "cross-env NODE_ENV=production node dist/index.js"
       },
       "keywords": [],
       "author": "",
