@@ -439,8 +439,8 @@ export class UserResolver {
     }
   }
 
-  @Mutation(() => UserApiResponse)
-  async login(@Arg("options") options: UserInput): Promise<UserApiResponse> {
+  @Mutation(() => BoolApiResponse)
+  async login(@Arg("options") options: UserInput): Promise<BoolApiResponse> {
     try {
       const user = await User.findOne({
         where:
@@ -463,7 +463,7 @@ export class UserResolver {
       }
       const accessToken = createAccessToken(user);
       const refreshToken = createRefreshToken(user);
-      return { ok: true, nodes: user, jwt: { accessToken, refreshToken } };
+      return { ok: true, nodes: true, jwt: { accessToken, refreshToken } };
     } catch (e) {
       return {
         ok: false,

@@ -29,6 +29,7 @@ import { createForumLoader } from "./resolvers/loaders/forumLoader";
 import { createWannagoLoader } from "./resolvers/loaders/wannagoLoader";
 import * as admin from "firebase-admin";
 import { ChatNotificationResolver } from "./resolvers/chat_notification";
+import { customAuthChecker } from "./middleware/authorized";
 var serviceAccount = require("../firebase-adminsdk.json");
 
 // import WebSocket from "ws";
@@ -131,6 +132,7 @@ const main = async () => {
     ],
     validate: false,
     pubSub,
+    authChecker: customAuthChecker,
   });
   const apolloServer = new ApolloServer({
     schema,

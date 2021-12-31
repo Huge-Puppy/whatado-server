@@ -9,7 +9,7 @@ import {
   JoinTable,
   OneToMany,
 } from "typeorm";
-import { Field, Int, ObjectType } from "type-graphql";
+import { Authorized, Field, Int, ObjectType } from "type-graphql";
 import { Event } from "./Event";
 import { Interest } from "./Interest";
 import { ChatNotification } from "./ChatNotification";
@@ -34,6 +34,7 @@ export class User extends BaseEntity {
   @Column()
   name!: string;
 
+  @Authorized("OWNER")
   @Field()
   @Column({ unique: true })
   phone!: string;
@@ -44,6 +45,7 @@ export class User extends BaseEntity {
   @Column({ default: "" })
   otp!: string;
 
+  @Authorized("OWNER")
   @Field(() => Int)
   @Column({ default: 0 })
   refreshCount!: number;
@@ -56,6 +58,7 @@ export class User extends BaseEntity {
   @Column()
   birthday!: Date;
 
+  @Authorized("OWNER")
   @Field()
   @Column({ default: "" })
   deviceId!: string;
@@ -64,6 +67,7 @@ export class User extends BaseEntity {
   @Column({ default: "[]" })
   photoUrls!: string;
 
+  @Authorized("OWNER")
   @Field(() => Int)
   @Column({ default: 0 })
   flags!: number;
@@ -72,10 +76,12 @@ export class User extends BaseEntity {
   @Column({ default: "" })
   bio!: string;
 
+  @Authorized("OWNER")
   @Field()
   @Column({ default: false })
   verified!: boolean;
 
+  @Authorized("OWNER")
   @Field(() => [Interest])
   @ManyToMany(() => Interest, (interest) => interest.peopleInterested, {
     cascade: ["insert", "update"],
@@ -83,6 +89,7 @@ export class User extends BaseEntity {
   @JoinTable()
   interests: Interest[];
 
+  @Authorized("OWNER")
   @Field(() => [User])
   @ManyToMany(() => User, {
     cascade: ["insert", "update"],
@@ -122,6 +129,7 @@ export class User extends BaseEntity {
   })
   myEvents: Event[];
 
+  @Authorized("OWNER")
   @Field(() => [ChatNotification])
   @OneToMany(() => ChatNotification, (n) => n.user, {
     cascade: ["insert", "update"],
