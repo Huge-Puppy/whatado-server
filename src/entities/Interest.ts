@@ -36,15 +36,15 @@ export class Interest extends BaseEntity {
 
   @Field(() => [User])
   @ManyToMany(() => User, (user) => user.interests, {
-    cascade: true,
+    cascade: ["insert", "update"],
     onDelete: "SET NULL",
   })
   peopleInterested: User[];
 
   @Field(() => [Event])
   @ManyToMany(() => Event, (event) => event.relatedInterests, {
-    cascade: true,
-    onDelete: "CASCADE",
+    cascade: ["insert", "update"],
+    onDelete: "SET NULL",
   })
   relatedEvents: Event[];
 }

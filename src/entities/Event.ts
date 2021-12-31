@@ -36,9 +36,8 @@ export class Event extends BaseEntity {
   updatedAt = new Date();
 
   @Field()
-  @Column({type: "timestamptz"})
+  @Column({ type: "timestamptz" })
   time: Date;
-
 
   @Field()
   @Column({ default: "" })
@@ -61,7 +60,10 @@ export class Event extends BaseEntity {
   flags!: number;
 
   @Field(() => User)
-  @ManyToOne(() => User, (user) => user.myEvents, { onDelete: "CASCADE"  ,cascade: true })
+  @ManyToOne(() => User, (user) => user.myEvents, {
+    onDelete: "CASCADE",
+    cascade: true,
+  })
   creator: User;
   @RelationId((event: Event) => event.creator)
   creatorId: number;
@@ -74,7 +76,6 @@ export class Event extends BaseEntity {
 
   @Field(() => [User])
   @ManyToMany(() => User, {
-    onDelete: "CASCADE",
     cascade: ["update", "insert"],
   })
   @JoinTable()
@@ -83,7 +84,6 @@ export class Event extends BaseEntity {
   @Field(() => [Interest])
   @ManyToMany(() => Interest, (interest) => interest.relatedEvents, {
     cascade: ["update", "insert"],
-    onDelete: "CASCADE",
   })
   @JoinTable()
   relatedInterests: Interest[];

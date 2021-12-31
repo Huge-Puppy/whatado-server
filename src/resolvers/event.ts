@@ -360,7 +360,7 @@ export class EventResolver {
         .relation("event")
         .select()
         .where("Wannago__user.id = :userId", { userId })
-        .orWhere("Wannago__event.id = :eventId", {
+        .andWhere("Wannago__event.id = :eventId", {
           eventId,
         })
         .getOneOrFail();

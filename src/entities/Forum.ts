@@ -37,15 +37,15 @@ export class Forum extends BaseEntity {
 
   @Field(() => [Chat])
   @OneToMany(() => Chat, (chat) => chat.forum, {
-    cascade: ["insert"],
+    cascade: ["insert", "update"],
     onDelete: "SET NULL",
   })
   chats: Chat[];
 
   @Field(() => Event)
   @OneToOne(() => Event, (event) => event.forum, {
-    onDelete: "SET NULL",
-    cascade: ["update", "insert"],
+    onDelete: "CASCADE",
+    cascade: true,
   })
   event: Event;
 

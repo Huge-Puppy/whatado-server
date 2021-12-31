@@ -29,7 +29,7 @@ export class Wannago extends BaseEntity {
   updatedAt = new Date();
 
   @Field()
-  @Column({default: false})
+  @Column({ default: false })
   declined!: boolean;
 
   @Field(() => User)

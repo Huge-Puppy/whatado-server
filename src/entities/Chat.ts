@@ -27,18 +27,21 @@ export class Chat extends BaseEntity {
   updatedAt = new Date();
 
   @Field()
-  @Column({default: ""})
+  @Column({ default: "" })
   text: string;
 
   @Field(() => Int)
-  @Column({default: 0})
+  @Column({ default: 0 })
   flags: number;
 
   @Field(() => User)
-  @ManyToOne(() => User, {onDelete: "CASCADE"})
+  @ManyToOne(() => User, { cascade: true, onDelete: "CASCADE" })
   author: User;
 
   @Field(() => Forum)
-  @ManyToOne(() => Forum, forum => forum.chats, {onDelete: "CASCADE"})
+  @ManyToOne(() => Forum, (forum) => forum.chats, {
+    cascade: true,
+    onDelete: "CASCADE",
+  })
   forum: Forum;
 }

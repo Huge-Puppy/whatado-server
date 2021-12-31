@@ -78,7 +78,6 @@ export class User extends BaseEntity {
 
   @Field(() => [Interest])
   @ManyToMany(() => Interest, (interest) => interest.peopleInterested, {
-    onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   @JoinTable()
@@ -86,7 +85,6 @@ export class User extends BaseEntity {
 
   @Field(() => [User])
   @ManyToMany(() => User, {
-    onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   @JoinTable()
@@ -94,7 +92,6 @@ export class User extends BaseEntity {
 
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.inverseFriends, {
-    onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   @JoinTable()
@@ -102,14 +99,12 @@ export class User extends BaseEntity {
 
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.friends, {
-    onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   inverseFriends: User[];
 
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.friendRequests, {
-    onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   @JoinTable()
@@ -117,22 +112,19 @@ export class User extends BaseEntity {
 
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.requestedFriends, {
-    onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   friendRequests: User[];
 
   @Field(() => [Event])
   @OneToMany(() => Event, (event) => event.creator, {
-    onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
   myEvents: Event[];
 
   @Field(() => [ChatNotification])
   @OneToMany(() => ChatNotification, (n) => n.user, {
-    onDelete: "CASCADE",
-    cascade: ["update", "insert"],
+    cascade: ["insert", "update"],
   })
   chatNotifications: ChatNotification[];
 }

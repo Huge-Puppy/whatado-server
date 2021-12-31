@@ -28,7 +28,7 @@ export class ChatNotification extends BaseEntity {
 
   @Field(() => Date)
   @Column()
-  lastAccessed!: Date
+  lastAccessed!: Date;
 
   @Field(() => Boolean)
   @Column({ default: false })
