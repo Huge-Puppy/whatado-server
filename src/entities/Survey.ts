@@ -7,16 +7,15 @@ import {
   BaseEntity,
   ManyToOne,
   OneToOne,
-  JoinColumn,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
 import { Forum } from "./Forum";
-import { Survey } from "./Survey";
+import { Chat } from "./Chat";
 
 @ObjectType()
 @Entity()
-export class Chat extends BaseEntity {
+export class Survey extends BaseEntity {
   @Field(() => Int)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -31,29 +30,20 @@ export class Chat extends BaseEntity {
 
   @Field()
   @Column({ default: "" })
-  text: string;
+  question: string;
 
-  @Field(() => Int)
-  @Column({ default: 0 })
-  flags: number;
+  @Field(() => [String])
+  @Column({ default: [] })
+  answers: string[];
 
-  @Field(() => User)
-  @ManyToOne(() => User, { cascade: true, onDelete: "CASCADE" })
-  author: User;
+  @Field(() => [Int])
+  @Column({ default: [] })
+  votes: number[];
 
-  @Field(() => Forum)
-  @ManyToOne(() => Forum, (forum) => forum.chats, {
+  @Field(() => Chat)
+  @OneToOne(() => Chat, (chat) => chat.survey, {
     cascade: true,
     onDelete: "CASCADE",
   })
-  forum: Forum;
-
-  @Field(() => Survey, {nullable: true})
-  @OneToOne(() => Survey, (survey) => survey.chat, {
-    nullable: true,
-    onDelete: "CASCADE",
-    cascade: ["insert", "update"],
-  })
-  @JoinColumn()
-  survey: Survey;
+  chat: Chat;
 }
