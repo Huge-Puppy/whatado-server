@@ -5,16 +5,17 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   BaseEntity,
-  OneToOne,
-  OneToMany,
+  ManyToOne,
+  ManyToMany,
+  JoinTable,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
-import { Chat } from "./Chat";
-import { Answer } from "./Answer";
+import { Survey } from "./Survey";
+import { User } from "./User";
 
 @ObjectType()
 @Entity()
-export class Survey extends BaseEntity {
+export class Answer extends BaseEntity {
   @Field(() => Int)
   @PrimaryGeneratedColumn()
   id!: number;
@@ -29,20 +30,17 @@ export class Survey extends BaseEntity {
 
   @Field()
   @Column({ default: "" })
-  question: String;
+  text: String;
 
-  @Field(() => Chat)
-  @OneToOne(() => Chat, (chat) => chat.survey, {
+  @Field(() => [User])
+  @ManyToMany(() => User)
+  @JoinTable()
+  votes: User[];
+
+  @Field(() => Survey)
+  @ManyToOne(() => Survey, (s) => s.answers, {
     cascade: true,
     onDelete: "CASCADE",
   })
-  chat: Chat;
-
-  @Field(() => [Answer])
-  @OneToMany(() => Answer, (a) => a.survey, {
-    cascade: ["insert", "update"],
-    onDelete: "SET NULL",
-    eager: true,
-  })
-  answers: Answer[]
+  survey: Survey;
 }

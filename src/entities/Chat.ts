@@ -51,6 +51,7 @@ export class Chat extends BaseEntity {
   @Field(() => Survey, {nullable: true})
   @OneToOne(() => Survey, (survey) => survey.chat, {
     nullable: true,
+    eager: true,
     onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })

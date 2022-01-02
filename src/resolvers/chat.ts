@@ -23,6 +23,9 @@ import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
 import { hasLoader } from "../middleware/hasLoader";
 import * as admin from "firebase-admin";
+import { SurveyInput } from "./inputs/surveyInput";
+import { Survey } from "../entities/Survey";
+import { Answer } from "../entities/Answer";
 
 @Resolver(() => Chat)
 export class ChatResolver extends BaseEntity {
@@ -104,8 +107,14 @@ export class ChatResolver extends BaseEntity {
       const chats = await Chat.createQueryBuilder("Chat")
         .leftJoinAndSelect("Chat.author", "Chat__author")
         .leftJoinAndSelect("Chat.forum", "Chat__forum")
+        .leftJoinAndSelect("Chat.survey", "Chat__survey")
+        .leftJoinAndSelect("Chat__survey.answers", "Chat__survey__answers")
+        .leftJoinAndSelect("Chat__survey__answers.votes", "Chat__survey__answers__votes")
         .relation("author")
         .relation("forum")
+        .relation("survey")
+        .relation("survey.answers")
+        .relation("survey.answers.votes")
         .select()
         .where("Chat__forum.id = :forumId", { forumId })
         .orderBy("Chat.createdAt", "DESC")
@@ -142,6 +151,7 @@ export class ChatResolver extends BaseEntity {
   @UseMiddleware(isAuth)
   async createChat(
     @Arg("options") chatOptions: ChatInput,
+    @Arg("surveyOptions", { nullable: true }) surveyOptions: SurveyInput,
     @PubSub() pubSub: PubSubEngine
   ): Promise<ChatApiResponse> {
     try {
@@ -150,10 +160,22 @@ export class ChatResolver extends BaseEntity {
         { relations: ["userNotifications", "userNotifications.user"] }
       );
       const author = await User.findOneOrFail({ id: chatOptions.authorId });
+      let survey: Survey | undefined = undefined;
+      if (surveyOptions != null) {
+        survey = new Survey();
+        survey.question = surveyOptions.question;
+        survey.answers = surveyOptions.answers.map<Answer>((answerText) => {
+          let newAnswer = new Answer();
+          newAnswer.text = answerText;
+          return newAnswer;
+        });
+        await survey.save();
+      }
       const chat = await Chat.create({
         text: chatOptions.text,
         author,
         forum,
+        survey,
       }).save();
 
       await pubSub.publish(`${chatOptions.forumId}`, chat);
