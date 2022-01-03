@@ -109,7 +109,10 @@ export class ChatResolver extends BaseEntity {
         .leftJoinAndSelect("Chat.forum", "Chat__forum")
         .leftJoinAndSelect("Chat.survey", "Chat__survey")
         .leftJoinAndSelect("Chat__survey.answers", "Chat__survey__answers")
-        .leftJoinAndSelect("Chat__survey__answers.votes", "Chat__survey__answers__votes")
+        .leftJoinAndSelect(
+          "Chat__survey__answers.votes",
+          "Chat__survey__answers__votes"
+        )
         .relation("author")
         .relation("forum")
         .relation("survey")
@@ -144,6 +147,13 @@ export class ChatResolver extends BaseEntity {
     @Root() chat: Chat
   ): Promise<Chat> {
     chat.createdAt = new Date(chat.createdAt);
+    if (chat.survey) {
+      chat.survey.answers.forEach((a, i, as) => {
+        as[i].votes.forEach((_, j, us) => {
+          us[j].birthday = new Date(us[j].birthday);
+        });
+      });
+    }
     return chat;
   }
 
@@ -166,6 +176,7 @@ export class ChatResolver extends BaseEntity {
         survey.question = surveyOptions.question;
         survey.answers = surveyOptions.answers.map<Answer>((answerText) => {
           let newAnswer = new Answer();
+          newAnswer.votes = [];
           newAnswer.text = answerText;
           return newAnswer;
         });
@@ -242,6 +253,52 @@ export class ChatResolver extends BaseEntity {
     try {
       await Chat.update({ id: options.id }, { text: options.text });
       return { nodes: true };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          { field: "chat", message: `error updating chat: ${e.message}` },
+        ],
+      };
+    }
+  }
+
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async vote(
+    @Arg("chatId", () => Int) chatId: number,
+    @Arg("answerId", () => Int) answerId: number,
+    @Arg("forumId", () => Int) forumId: number,
+    @Ctx() { payload }: MyContext,
+    @PubSub() pubSub: PubSubEngine
+  ): Promise<BoolApiResponse> {
+    try {
+      const chat = await Chat.findOneOrFail(chatId, {
+        relations: [
+          "author",
+          "survey",
+          "survey.answers",
+          "survey.answers.votes",
+        ],
+      });
+      const oldanswer = chat.survey.answers.find((a) =>
+        a.votes.map((e) => e.id).includes(Number(payload!.userId))
+      );
+      if (oldanswer) {
+        oldanswer.votes = oldanswer.votes.filter(
+          (a) => a.id != Number(payload!.userId)
+        );
+        await oldanswer.save();
+      }
+      const newanswer = chat.survey.answers.find((a) => a.id === answerId);
+      const user = await User.findOneOrFail(payload!.userId);
+      newanswer?.votes.push(user);
+      await newanswer?.save();
+      await pubSub.publish(`${forumId}`, chat);
+      return {
+        ok: true,
+        nodes: true,
+      };
     } catch (e) {
       return {
         ok: false,
