@@ -26,6 +26,10 @@ import {
   MoreThan,
   MoreThanOrEqual,
   LessThanOrEqual,
+  Any,
+  IsNull,
+  In,
+  Brackets,
 } from "typeorm";
 import * as admin from "firebase-admin";
 
@@ -66,7 +70,9 @@ export class EventResolver {
     @Arg("sortType", () => SortType) sortType: SortType
   ): Promise<EventsApiResponse> {
     try {
-      const me = await User.findOneOrFail(payload!.userId);
+      const me = await User.findOneOrFail(payload!.userId, {
+        relations: ["interests"],
+      });
       //calculate birthday
       const now = new Date();
       var age = now.getFullYear() - me.birthday.getFullYear();
@@ -78,33 +84,79 @@ export class EventResolver {
         }
       }
       // get events filtered
-      const events = await Event.find({
-        where: [{
-          time: Between(dateRange.startDate, dateRange.endDate),
-          filterGender: Equal(me.gender),
-          filterMinAge: LessThanOrEqual(age),
-          filterMaxAge: MoreThanOrEqual(age),
-        },
-      {
-          time: Between(dateRange.startDate, dateRange.endDate),
-          filterGender: Equal(Gender.BOTH),
-          filterMinAge: LessThanOrEqual(age),
-          filterMaxAge: MoreThanOrEqual(age),
-      }],
-        order: {
-          createdAt: sortType === SortType.NEWEST ? "DESC" : undefined,
-          time: sortType === SortType.SOONEST ? "ASC" : undefined,
-        },
-        skip: skip,
-        take: take,
-        relations: [
-          "relatedInterests",
-          "creator",
-          "wannago",
-          "wannago.user",
-          "invited",
-        ],
-      });
+      const events = await Event.createQueryBuilder("Event")
+        .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
+        .leftJoinAndSelect("Event.creator", "Event__creator")
+        .leftJoinAndSelect("Event.wannago", "Event__wannago")
+        .leftJoinAndSelect("Event.invited", "Event__invited")
+        .leftJoinAndSelect("Event__wannago.user", "Event__wannago__user")
+        .relation("relatedInterests")
+        .relation("creator")
+        .relation("wannago")
+        .relation("wannago.user")
+        .relation("invited")
+        .select()
+        .where("Event.time BETWEEN :time1 AND :time2", {
+          time1: dateRange.startDate,
+          time2: dateRange.endDate,
+        })
+        .andWhere("Event.filterMinAge <= :userAge", { userAge: age })
+        .andWhere("Event.filterMaxAge >= :userAge", { userAge: age })
+        .andWhere(
+          new Brackets((qb) => {
+            qb.where("Event.filterGender = :gender", {
+              gender: me.gender,
+            }).orWhere("Event.filterGender = :gender", { gender: Gender.BOTH });
+          })
+        )
+        .andWhere(
+          new Brackets((qb) => {
+            qb.where("Event__relatedInterests &&  :interests", {
+              interests: me.interests,
+            }).orWhere("Event__relatedInterests IS NULL");
+          })
+        )
+        .orderBy(
+          "Event.time",
+          sortType === SortType.SOONEST ? "ASC" : undefined
+        )
+        .addOrderBy(
+          "Event.createdAt",
+          sortType === SortType.NEWEST ? "DESC" : undefined
+        )
+        .skip(skip)
+        .take(take)
+        .getMany();
+
+      // const events = await Event.find({
+      //   where: [
+      //     {
+      //       time: Between(dateRange.startDate, dateRange.endDate),
+      //       filterGender: Equal(me.gender),
+      //       filterMinAge: LessThanOrEqual(age),
+      //       filterMaxAge: MoreThanOrEqual(age),
+      //     },
+      //     {
+      //       time: Between(dateRange.startDate, dateRange.endDate),
+      //       filterGender: Equal(Gender.BOTH),
+      //       filterMinAge: LessThanOrEqual(age),
+      //       filterMaxAge: MoreThanOrEqual(age),
+      //     },
+      //   ],
+      //   order: {
+      //     createdAt: sortType === SortType.NEWEST ? "DESC" : undefined,
+      //     time: sortType === SortType.SOONEST ? "ASC" : undefined,
+      //   },
+      //   skip: skip,
+      //   take: take,
+      //   relations: [
+      //     "relatedInterests",
+      //     "creator",
+      //     "wannago",
+      //     "wannago.user",
+      //     "invited",
+      //   ],
+      // });
       return { ok: true, nodes: events };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
