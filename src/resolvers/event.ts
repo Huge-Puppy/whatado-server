@@ -21,14 +21,7 @@ import { ChatNotification } from "../entities/ChatNotification";
 import { Wannago } from "../entities/Wannago";
 import { DateRangeInput } from "./inputs/general";
 import {
-  Between,
-  Equal,
   MoreThan,
-  MoreThanOrEqual,
-  LessThanOrEqual,
-  Any,
-  IsNull,
-  In,
   Brackets,
 } from "typeorm";
 import * as admin from "firebase-admin";
@@ -83,9 +76,10 @@ export class EventResolver {
           age--;
         }
       }
+      const intIds = [1,2,3];
       // get events filtered
       const events = await Event.createQueryBuilder("Event")
-        .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
+        .innerJoinAndSelect("Event.relatedInterests", "Event__relatedInterests", "Event__relatedIntersts.id IN (:...intIds)", { intIds })
         .leftJoinAndSelect("Event.creator", "Event__creator")
         .leftJoinAndSelect("Event.wannago", "Event__wannago")
         .leftJoinAndSelect("Event.invited", "Event__invited")
@@ -100,19 +94,19 @@ export class EventResolver {
           time1: dateRange.startDate,
           time2: dateRange.endDate,
         })
-        .andWhere("Event.filterMinAge <= :userAge", { userAge: age })
-        .andWhere("Event.filterMaxAge >= :userAge", { userAge: age })
+        .andWhere("Event.filterMinAge <= :userAge1", { userAge1: age })
+        .andWhere("Event.filterMaxAge >= :userAge2", { userAge2: age })
         .andWhere(
           new Brackets((qb) => {
-            qb.where("Event.filterGender = :gender", {
-              gender: me.gender,
-            }).orWhere("Event.filterGender = :gender", { gender: Gender.BOTH });
+            qb.where("Event.filterGender = :gender1", {
+              gender1: me.gender,
+            }).orWhere("Event.filterGender = :gender2", { gender2: Gender.BOTH });
           })
         )
         .andWhere(
           new Brackets((qb) => {
-            qb.where("Event__relatedInterests &&  :interests", {
-              interests: me.interests,
+            qb.where("Event__relatedInterests.id ANY(:ints)", {
+              ints: me.interests,
             }).orWhere("Event__relatedInterests IS NULL");
           })
         )

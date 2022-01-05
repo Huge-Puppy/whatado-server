@@ -148,7 +148,7 @@ export class ChatResolver extends BaseEntity {
   ): Promise<Chat> {
     chat.createdAt = new Date(chat.createdAt);
     if (chat.survey) {
-      chat.survey.answers.forEach((a, i, as) => {
+      chat.survey.answers.forEach((__, i, as) => {
         as[i].votes.forEach((_, j, us) => {
           us[j].birthday = new Date(us[j].birthday);
         });
