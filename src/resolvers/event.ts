@@ -20,10 +20,7 @@ import { Gender, MyContext, SortType } from "../types";
 import { ChatNotification } from "../entities/ChatNotification";
 import { Wannago } from "../entities/Wannago";
 import { DateRangeInput } from "./inputs/general";
-import {
-  MoreThan,
-  Brackets,
-} from "typeorm";
+import { MoreThan, Brackets } from "typeorm";
 import * as admin from "firebase-admin";
 
 @Resolver(() => Event)
@@ -76,10 +73,10 @@ export class EventResolver {
           age--;
         }
       }
-      const intIds = [1,2,3];
+      const intIds = me.interests.map((i) => i.id);
       // get events filtered
       const events = await Event.createQueryBuilder("Event")
-        .innerJoinAndSelect("Event.relatedInterests", "Event__relatedInterests", "Event__relatedIntersts.id IN (:...intIds)", { intIds })
+        .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
         .leftJoinAndSelect("Event.creator", "Event__creator")
         .leftJoinAndSelect("Event.wannago", "Event__wannago")
         .leftJoinAndSelect("Event.invited", "Event__invited")
@@ -100,14 +97,17 @@ export class EventResolver {
           new Brackets((qb) => {
             qb.where("Event.filterGender = :gender1", {
               gender1: me.gender,
-            }).orWhere("Event.filterGender = :gender2", { gender2: Gender.BOTH });
+            }).orWhere("Event.filterGender = :gender2", {
+              gender2: Gender.BOTH,
+            });
           })
         )
         .andWhere(
           new Brackets((qb) => {
-            qb.where("Event__relatedInterests.id ANY(:ints)", {
-              ints: me.interests,
-            }).orWhere("Event__relatedInterests IS NULL");
+            qb.where("Event_Event__relatedInterests.eventId IS NULL").orWhere(
+              "Event__relatedInterests.id IN (:...intIds)",
+              { intIds }
+            );
           })
         )
         .orderBy(
