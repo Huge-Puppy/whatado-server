@@ -111,12 +111,8 @@ export class EventResolver {
           })
         )
         .orderBy(
-          "Event.time",
-          sortType === SortType.SOONEST ? "ASC" : undefined
-        )
-        .addOrderBy(
-          "Event.createdAt",
-          sortType === SortType.NEWEST ? "DESC" : undefined
+          sortType === SortType.SOONEST ? "Event.time" : "Event.createdAt",
+          sortType === SortType.SOONEST ? "ASC" : "DESC"
         )
         .skip(skip)
         .take(take)
