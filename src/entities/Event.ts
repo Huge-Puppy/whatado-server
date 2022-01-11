@@ -16,7 +16,7 @@ import {
 import { Field, Float, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
 import { Interest } from "./Interest";
-import { Gender } from "../types";
+import { Gender, Privacy } from "../types";
 import { Forum } from "./Forum";
 import { Wannago } from "./Wannago";
 
@@ -107,6 +107,10 @@ export class Event extends BaseEntity {
   @Field(() => Gender)
   @Column({ type: "enum", enum: Gender, default: Gender.BOTH })
   filterGender!: Gender;
+
+  @Field(() => Privacy)
+  @Column({ type: "enum", enum: Privacy, default: Privacy.PUBLIC })
+  privacy!: Privacy;
 
   @Field(() => Int)
   @Column({ default: 18 })

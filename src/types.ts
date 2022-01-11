@@ -28,10 +28,17 @@ export enum Gender {
   BOTH = "both",
 }
 
+export enum Privacy {
+  PUBLIC = "public",
+  FRIENDS = "friends",
+  PRIVATE = "private",
+}
+
 export enum SortType {
   NEWEST = "newest",
   SOONEST = "soonest",
 }
 
 registerEnumType(Gender, { name: "Gender" });
+registerEnumType(Privacy, { name: "Privacy" });
 registerEnumType(SortType, { name: "SortType" });

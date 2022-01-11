@@ -1,4 +1,4 @@
-import { Gender } from "../../types";
+import { Gender, Privacy } from "../../types";
 import { Event } from "../../entities/Event";
 import { Field, Float, InputType, Int } from "type-graphql";
 
@@ -28,6 +28,8 @@ export class EventInput implements Partial<Event>{
   filterRadius: number;
   @Field(() => Gender)
   filterGender: Gender;
+  @Field(() => Privacy)
+  privacy: Privacy;
   @Field(() => Int)
   filterMinAge: number;
   @Field(() => Int)
@@ -60,6 +62,8 @@ export class EventFilterInput implements Partial<Event>{
   filterRadius?: number;
   @Field(() => Gender, { nullable: true })
   filterGender?: Gender;
+  @Field(() => Privacy, { nullable: true })
+  privacy?: Privacy;
   @Field({ nullable: true })
   filterMinAge?: number;
   @Field({ nullable: true })

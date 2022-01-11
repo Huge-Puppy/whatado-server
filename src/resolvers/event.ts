@@ -16,7 +16,7 @@ import { BoolApiResponse } from "./outputs/general";
 import { isAuth } from "../middleware/isAuth";
 import { Forum } from "../entities/Forum";
 import { User } from "../entities/User";
-import { Gender, MyContext, SortType } from "../types";
+import { Gender, MyContext, Privacy, SortType } from "../types";
 import { ChatNotification } from "../entities/ChatNotification";
 import { Wannago } from "../entities/Wannago";
 import { DateRangeInput } from "./inputs/general";
@@ -61,7 +61,7 @@ export class EventResolver {
   ): Promise<EventsApiResponse> {
     try {
       const me = await User.findOneOrFail(payload!.userId, {
-        relations: ["interests"],
+        relations: ["interests", "friends", "inverseFriends"],
       });
       //calculate birthday
       const now = new Date();
@@ -95,6 +95,26 @@ export class EventResolver {
         .andWhere("Event.filterMaxAge >= :userAge2", { userAge2: age })
         .andWhere(
           new Brackets((qb) => {
+            qb.where("Event.privacy = :privacy1", {
+              privacy1: Privacy.PUBLIC,
+            }).orWhere(
+              new Brackets((qb2) => {
+                qb2
+                  .where("Event.privacy =:privacy2", {
+                    privacy2: Privacy.FRIENDS,
+                  })
+                  .andWhere("Event__creator.id IN (:...userIds1)", {
+                    userIds1: [
+                      ...me.friends.map((f) => f.id),
+                      ...me.inverseFriends.map((f) => f.id),
+                    ],
+                  });
+              })
+            );
+          })
+        )
+        .andWhere(
+          new Brackets((qb) => {
             qb.where("Event.filterGender = :gender1", {
               gender1: me.gender,
             }).orWhere("Event.filterGender = :gender2", {
@@ -118,35 +138,6 @@ export class EventResolver {
         .take(take)
         .getMany();
 
-      // const events = await Event.find({
-      //   where: [
-      //     {
-      //       time: Between(dateRange.startDate, dateRange.endDate),
-      //       filterGender: Equal(me.gender),
-      //       filterMinAge: LessThanOrEqual(age),
-      //       filterMaxAge: MoreThanOrEqual(age),
-      //     },
-      //     {
-      //       time: Between(dateRange.startDate, dateRange.endDate),
-      //       filterGender: Equal(Gender.BOTH),
-      //       filterMinAge: LessThanOrEqual(age),
-      //       filterMaxAge: MoreThanOrEqual(age),
-      //     },
-      //   ],
-      //   order: {
-      //     createdAt: sortType === SortType.NEWEST ? "DESC" : undefined,
-      //     time: sortType === SortType.SOONEST ? "ASC" : undefined,
-      //   },
-      //   skip: skip,
-      //   take: take,
-      //   relations: [
-      //     "relatedInterests",
-      //     "creator",
-      //     "wannago",
-      //     "wannago.user",
-      //     "invited",
-      //   ],
-      // });
       return { ok: true, nodes: events };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
@@ -250,7 +241,10 @@ export class EventResolver {
       const relatedInterests = options.relatedInterestsIds.map((id) => ({
         id: id,
       }));
-      console.log(options);
+      const invited = options.invitedIds.map((id) => ({
+        id: id,
+      }));
+
       const event = await Event.create({
         time: options.time,
         location: options.location,
@@ -261,12 +255,46 @@ export class EventResolver {
         filterMaxAge: options.filterMaxAge,
         filterGender: options.filterGender,
         filterRadius: options.filterRadius,
+        privacy: options.privacy,
         creator: user,
-        wannago: [],
-        invited: [],
-        relatedInterests,
         forum: forum,
+        wannago: [],
+        invited,
+        relatedInterests,
       }).save();
+
+      if (event.privacy == Privacy.PRIVATE) {
+        const invitedUsers = await User.findByIds(options.invitedIds);
+        // Send invites to all privately invited users
+        const message = {
+          data: {
+            type: "event",
+            eventId: `${event.id}`,
+          },
+          notification: {
+            title: "You're Invited!",
+            body: `You're invited to ${event.title}`,
+          },
+        };
+
+        const messageOptions = {
+          priority: "high",
+          contentAvailable: true,
+        };
+        await admin
+          .messaging()
+          .sendToDevice(
+            invitedUsers.map((u) => u.deviceId),
+            message,
+            messageOptions
+          )
+          .then((response) => {
+            console.log("Successfully sent message:", response);
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      }
       return { ok: true, nodes: event };
     } catch (e) {
       return {
