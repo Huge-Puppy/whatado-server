@@ -107,6 +107,7 @@ export class EventResolver {
                     userIds1: [
                       ...me.friends.map((f) => f.id),
                       ...me.inverseFriends.map((f) => f.id),
+	  0
                     ],
                   });
               })
