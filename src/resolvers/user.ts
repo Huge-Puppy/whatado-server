@@ -502,15 +502,11 @@ export class UserResolver {
 
       let key: keyof typeof themap;
       for (key in themap) {
-        if (themap[key] != null) {
+        if (themap[key] != null && key.toString() != "id") {
           finalmap[key] = themap[key];
         }
       }
-
-      const user = await User.update(
-        { id: payload.userId as any },
-        { ...finalmap }
-      );
+      const user = await User.update(payload.userId, { ...finalmap });
 
       return {
         ok: true,
