@@ -8,6 +8,7 @@ import {
   ManyToMany,
   JoinTable,
   OneToMany,
+  RelationId,
 } from "typeorm";
 import { Authorized, Field, Int, ObjectType } from "type-graphql";
 import { Event } from "./Event";
@@ -104,11 +105,19 @@ export class User extends BaseEntity {
   @JoinTable()
   friends: User[];
 
+  @Field(() => [Int])
+  @RelationId((user: User) => user.friends)
+  friendsIds: number[];
+
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.friends, {
     cascade: ["insert", "update"],
   })
   inverseFriends: User[];
+
+  @Field(() => [Int])
+  @RelationId((user: User) => user.inverseFriends)
+  inverseFriendsIds: number[];
 
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.friendRequests, {
@@ -117,11 +126,19 @@ export class User extends BaseEntity {
   @JoinTable()
   requestedFriends: User[];
 
+  @Field(() => [Int])
+  @RelationId((user: User) => user.requestedFriends)
+  requestedFriendsIds: number[];
+
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.requestedFriends, {
     cascade: ["insert", "update"],
   })
   friendRequests: User[];
+
+  @Field(() => [Int])
+  @RelationId((user: User) => user.friendRequests)
+  friendRequestsIds: number[];
 
   @Field(() => [Event])
   @OneToMany(() => Event, (event) => event.creator, {

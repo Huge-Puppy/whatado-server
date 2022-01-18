@@ -33,12 +33,12 @@ export class UserResolver {
           "chatNotifications",
           "myEvents",
           "blockedUsers",
-          "friends",
-          "inverseFriends",
-          "requestedFriends",
-          "friendRequests",
         ],
       });
+      user.friends = await User.findByIds(user.friendsIds);
+      user.inverseFriends = await User.findByIds(user.inverseFriendsIds);
+      user.requestedFriends = await User.findByIds(user.requestedFriendsIds);
+      user.friendRequests = await User.findByIds(user.friendRequestsIds);
       return {
         nodes: user,
         ok: true,
@@ -744,11 +744,13 @@ export class UserResolver {
 
   @FieldResolver()
   blockedUsers(@Root() user: User, @Ctx() { userLoader }: MyContext) {
+    if (!user.blockedUsers) return [];
     return userLoader.loadMany(user.blockedUsers.map((user) => user.id));
   }
 
   @FieldResolver()
   friends(@Root() user: User, @Ctx() { userLoader }: MyContext) {
+    if (!user.friends) return [];
     return userLoader.loadMany(user.friends.map((user) => user.id));
   }
 
@@ -763,6 +765,7 @@ export class UserResolver {
   }
   @FieldResolver()
   myEvents(@Root() user: User, @Ctx() { eventLoader }: MyContext) {
+    if (!user.myEvents) return [];
     return eventLoader.loadMany(user.myEvents.map((event) => event.id));
   }
 }

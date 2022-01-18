@@ -7,6 +7,7 @@
         "tsc": "tsc",
         "watch": "tsc -w",
         "dev": "cross-env NODE_ENV=local-dev nodemon dist/index.js",
+        "localprod": "cross-env NODE_ENV=local-prod nodemon dist/index.js",
         "start": "cross-env NODE_ENV=production node dist/index.js"
     },
     "keywords": [],
