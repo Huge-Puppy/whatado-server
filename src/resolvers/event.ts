@@ -107,7 +107,7 @@ export class EventResolver {
                     userIds1: [
                       ...me.friends.map((f) => f.id),
                       ...me.inverseFriends.map((f) => f.id),
-	  0
+                      0,
                     ],
                   });
               })
@@ -169,22 +169,14 @@ export class EventResolver {
   @UseMiddleware(isAuth)
   async myEvents(@Ctx() { payload }: MyContext): Promise<EventsApiResponse> {
     try {
-      const events = await Event.createQueryBuilder("Event")
-        .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
-        .leftJoinAndSelect("Event.creator", "Event__creator")
-        .leftJoinAndSelect("Event.wannago", "Event__wannago")
-        .leftJoinAndSelect("Event.invited", "Event__invited")
-        .relation("relatedInterests")
-        .relation("creator")
-        .relation("wannago")
-        .relation("invited")
-        .select()
-        .where("Event__invited.id = :invitedId", { invitedId: payload!.userId })
-        .orWhere("Event__creator.id = :creatorId", {
-          creatorId: payload!.userId,
-        })
-        .orderBy("Event.time", "ASC")
-        .getMany();
+      const me = await User.findOneOrFail(payload?.userId);
+      const events = await Event.findByIds(
+        [...me.invitedEventsIds, ...me.myEventsIds],
+        {
+          relations: ["relatedInterests", "creator", "wannago", "invited"],
+          order: { time: "ASC" },
+        }
+      );
       return { ok: true, nodes: events };
     } catch (e) {
       return {
@@ -230,12 +222,18 @@ export class EventResolver {
     @Ctx() { payload }: MyContext
   ): Promise<EventApiResponse> {
     try {
-      const cn = await ChatNotification.create({
-        user: { id: payload!.userId as any },
-        lastAccessed: new Date(),
-      }).save();
+      // create cn for every invited user
+      let cns: ChatNotification[] = [];
+      for (var tempId of [payload!.userId, ...options.invitedIds]) {
+        cns = cns.concat(
+          await ChatNotification.create({
+            user: { id: tempId as any },
+            lastAccessed: new Date(),
+          }).save()
+        );
+      }
       const forum = await Forum.create({
-        userNotifications: [cn],
+        userNotifications: cns,
         chats: [],
       }).save();
       const user = await User.findOneOrFail(options.creatorId);
@@ -311,36 +309,19 @@ export class EventResolver {
     @Arg("options") options: EventFilterInput
   ): Promise<EventApiResponse> {
     try {
-      // should create new interests with client call before updating event
-      const relatedInterests =
-        options.relatedInterestsIds?.map(
-          (id) =>
-            ({
-              id,
-            } as any)
-        ) ?? undefined;
-      const creator = { id: options.creatorId };
-      const forum = { id: options.forumId };
-      const wannago =
-        options.wannagoIds?.map((id) => ({ id } as any)) ?? undefined;
-      const invited =
-        options.invitedIds?.map((id) => ({ id } as any)) ?? undefined;
-      delete options.relatedInterestsIds;
-      delete options.creatorId;
-      delete options.forumId;
-      delete options.wannagoIds;
-      delete options.invitedIds;
-      const event = await Event.update(
-        { id: options.id },
-        {
-          ...options,
-          relatedInterests,
-          creator,
-          forum,
-          wannago,
-          invited,
+      const themap = new Object({
+        ...options,
+      });
+
+      var finalmap: { [k: string]: any } = {};
+
+      let key: keyof typeof themap;
+      for (key in themap) {
+        if (themap[key] != null && key.toString() != "id") {
+          finalmap[key] = themap[key];
         }
-      );
+      }
+      const event = await Event.update({ id: options.id }, { ...finalmap });
       return { ok: true, nodes: event.raw[0] };
     } catch (e) {
       return {
@@ -388,6 +369,11 @@ export class EventResolver {
       });
       event.invited = [...event.invited, user];
       await event.save();
+      await ChatNotification.create({
+        user: { id: userId as any },
+        lastAccessed: new Date(),
+        forum: event.forum,
+      }).save();
       const message = {
         data: {
           type: "event",

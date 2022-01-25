@@ -39,8 +39,8 @@ export class ForumResolver extends BaseEntity {
   @Query(() => ForumsApiResponse)
   @UseMiddleware(isAuth)
   async forumsByEventId(
-    @Arg("ids", () => [Int!]!) ids: number[]
-    // @Ctx() { payload }: MyContext
+    @Arg("ids", () => [Int!]!) ids: number[],
+    @Ctx() { payload }: MyContext
   ): Promise<ForumsApiResponse> {
     // TODO: only get usernotifications for the logged in user in field resolver
     try {
@@ -55,8 +55,11 @@ export class ForumResolver extends BaseEntity {
         .relation("event")
         .relation("userNotifications")
         .select()
-        .andWhere("Forum__event.id IN (:...ids)", {
+        .where("Forum__event.id IN (:...ids)", {
           ids: ids,
+        })
+        .andWhere("Forum__userNotifications.user.id = :myId", {
+          myId: payload!.userId,
         })
         .getRawAndEntities();
 
@@ -116,6 +119,6 @@ export class ForumResolver extends BaseEntity {
   @FieldResolver()
   chats(@Root() forum: Forum, @Ctx() { chatLoader }: MyContext) {
     if (forum.chats == null) return [];
-    return chatLoader.loadMany(forum.chats.slice(0, 1).map((chat) => chat.id));
+    return chatLoader.loadMany(forum.chats.slice(forum.chats.length-1).map((chat) => chat.id));
   }
 }

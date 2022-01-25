@@ -212,8 +212,12 @@ export class ChatResolver extends BaseEntity {
         .messaging()
         .sendToDevice(
           forum.userNotifications
-            .filter((un) => !un.muted && un.user.deviceId != author.deviceId)
-            .map((un) => un.user.deviceId),
+            .filter((un) => {
+              return !un.muted && un.user.deviceId != author.deviceId;
+            })
+            .map((un) => {
+              return un.user.deviceId;
+            }),
           message,
           options
         )

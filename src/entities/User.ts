@@ -101,6 +101,7 @@ export class User extends BaseEntity {
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.inverseFriends, {
     cascade: ["insert", "update"],
+    onDelete: "CASCADE",
   })
   @JoinTable()
   friends: User[];
@@ -112,6 +113,7 @@ export class User extends BaseEntity {
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.friends, {
     cascade: ["insert", "update"],
+    onDelete: "CASCADE",
   })
   inverseFriends: User[];
 
@@ -122,6 +124,7 @@ export class User extends BaseEntity {
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.friendRequests, {
     cascade: ["insert", "update"],
+    onDelete: "CASCADE",
   })
   @JoinTable()
   requestedFriends: User[];
@@ -133,6 +136,7 @@ export class User extends BaseEntity {
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.requestedFriends, {
     cascade: ["insert", "update"],
+    onDelete: "CASCADE",
   })
   friendRequests: User[];
 
@@ -145,6 +149,21 @@ export class User extends BaseEntity {
     cascade: ["insert", "update"],
   })
   myEvents: Event[];
+
+  @Field(() => [Int])
+  @RelationId((user: User) => user.myEvents)
+  myEventsIds: number[];
+
+  @Field(() => [Event])
+  @ManyToMany(() => Event, (event) => event.invited, {
+    cascade: ["insert", "update"],
+    onDelete: "CASCADE",
+  })
+  invitedEvents: Event[];
+
+  @Field(() => [Int])
+  @RelationId((user: User) => user.invitedEvents)
+  invitedEventsIds: number[];
 
   @Authorized("OWNER")
   @Field(() => [ChatNotification])

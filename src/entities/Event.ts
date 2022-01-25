@@ -75,8 +75,9 @@ export class Event extends BaseEntity {
   wannago: Wannago[];
 
   @Field(() => [User])
-  @ManyToMany(() => User, {
+  @ManyToMany(() => User, (user) => user.invitedEvents, {
     cascade: ["update", "insert"],
+    onDelete: "CASCADE",
   })
   @JoinTable()
   invited: User[];
