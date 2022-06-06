@@ -46,7 +46,7 @@
         "pg": "^8.6.0",
         "reflect-metadata": "^0.1.13",
         "subscriptions-transport-ws": "^0.9.19",
-        "tsc": "^2.0.3",
+        "tsc": "^2.0.4",
         "twilio": "^3.69.0",
         "type-graphql": "^1.1.1",
         "typeorm": "^0.2.34",

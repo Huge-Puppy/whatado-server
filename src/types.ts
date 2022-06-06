@@ -7,6 +7,7 @@ import { createEventLoader } from "./resolvers/loaders/eventLoader";
 import { createChatLoader } from "./resolvers/loaders/chatLoader";
 import { createForumLoader } from "./resolvers/loaders/forumLoader";
 import { createWannagoLoader } from "./resolvers/loaders/wannagoLoader";
+import { createGroupLoader } from "./resolvers/loaders/groupLoader";
 
 export type MyContext = {
   req: Request;
@@ -19,6 +20,7 @@ export type MyContext = {
   chatLoader: ReturnType<typeof createChatLoader>;
   forumLoader: ReturnType<typeof createForumLoader>;
   wannagoLoader: ReturnType<typeof createWannagoLoader>;
+  groupLoader: ReturnType<typeof createGroupLoader>;
   isDataLoaderAttached: Boolean;
 };
 
@@ -30,7 +32,7 @@ export enum Gender {
 
 export enum Privacy {
   PUBLIC = "public",
-  FRIENDS = "friends",
+  GROUP = "friends",
   PRIVATE = "private",
 }
 

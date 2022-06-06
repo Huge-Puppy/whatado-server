@@ -7,6 +7,7 @@ import { Interest } from "../../entities/Interest";
 import { Event } from "../../entities/Event";
 import { ChatNotification } from "../../entities/ChatNotification";
 import { Wannago } from "../../entities/Wannago";
+import { Group } from "../../entities/Group";
 
 @ObjectType()
 export class ChatApiResponse extends ApiResponse(Chat) {}
@@ -16,6 +17,12 @@ export class ChatsApiResponse extends ApiListResponse(Chat) {}
 
 @ObjectType()
 export class EventApiResponse extends ApiResponse(Event) {}
+
+@ObjectType()
+export class GroupApiResponse extends ApiResponse(Group) {}
+
+@ObjectType()
+export class GroupsApiResponse extends ApiListResponse(Group) {}
 
 @ObjectType()
 export class EventsApiResponse extends ApiListResponse(Event) {}

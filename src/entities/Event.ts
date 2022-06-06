@@ -113,6 +113,10 @@ export class Event extends BaseEntity {
   @Column({ type: "enum", enum: Privacy, default: Privacy.PUBLIC })
   privacy!: Privacy;
 
+  @Field(() => Int, {nullable: true})
+  @Column({nullable: true})
+  groupId: number;
+
   @Field(() => Int)
   @Column({ default: 18 })
   filterMinAge!: number;

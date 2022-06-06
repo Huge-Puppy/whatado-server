@@ -6,6 +6,7 @@ import { createInterestLoader } from "../resolvers/loaders/interestLoader";
 import { createChatNotificationLoader } from "../resolvers/loaders/chatNotificationLoader";
 import { createEventLoader } from "../resolvers/loaders/eventLoader";
 import { createForumLoader } from "../resolvers/loaders/forumLoader";
+import { createGroupLoader } from "../resolvers/loaders/groupLoader";
 
 export const hasLoader: MiddlewareFn<MyContext> = ({ context }, next) => {
   if (!context.isDataLoaderAttached) {
@@ -16,6 +17,7 @@ export const hasLoader: MiddlewareFn<MyContext> = ({ context }, next) => {
       context.eventLoader= createEventLoader();
       context.chatLoader= createChatLoader();
       context.forumLoader= createForumLoader();
+      context.groupLoader= createGroupLoader();
   }
   return next();
 };

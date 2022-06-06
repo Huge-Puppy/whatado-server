@@ -15,6 +15,7 @@ import { Event } from "./Event";
 import { Interest } from "./Interest";
 import { ChatNotification } from "./ChatNotification";
 import { Gender } from "../types";
+import { Group } from "./Group";
 
 @ObjectType()
 @Entity()
@@ -109,6 +110,17 @@ export class User extends BaseEntity {
   @Field(() => [Int])
   @RelationId((user: User) => user.friends)
   friendsIds: number[];
+
+  @Field(() => [Group])
+  @ManyToMany(() => Group, (g) => g.users, {
+    cascade: ["insert", "update"],
+    onDelete: "CASCADE",
+  })
+  groups: Group[];
+
+  @Field(() => [Int])
+  @RelationId((user: User) => user.groups)
+  groupsIds: number[];
 
   @Field(() => [User])
   @ManyToMany(() => User, (u) => u.friends, {

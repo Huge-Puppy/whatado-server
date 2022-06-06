@@ -73,7 +73,7 @@ export class EventResolver {
           age--;
         }
       }
-      const intIds = me.interests.map((i) => i.id);
+      // const intIds = me.interests.map((i) => i.id);
       // get events filtered
       const events = await Event.createQueryBuilder("Event")
         .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
@@ -101,7 +101,7 @@ export class EventResolver {
               new Brackets((qb2) => {
                 qb2
                   .where("Event.privacy =:privacy2", {
-                    privacy2: Privacy.FRIENDS,
+                    privacy2: Privacy.GROUP,
                   })
                   .andWhere("Event__creator.id IN (:...userIds1)", {
                     userIds1: [
@@ -123,14 +123,14 @@ export class EventResolver {
             });
           })
         )
-        .andWhere(
-          new Brackets((qb) => {
-            qb.where("Event_Event__relatedInterests.eventId IS NULL").orWhere(
-              "Event__relatedInterests.id IN (:...intIds)",
-              { intIds }
-            );
-          })
-        )
+        // .andWhere(
+        //   new Brackets((qb) => {
+        //     qb.where("Event_Event__relatedInterests.eventId IS NULL").orWhere(
+        //       "Event__relatedInterests.id IN (:...intIds)",
+        //       { intIds }
+        //     );
+        //   })
+        // )
         .orderBy(
           sortType === SortType.SOONEST ? "Event.time" : "Event.createdAt",
           sortType === SortType.SOONEST ? "ASC" : "DESC"
@@ -139,6 +139,7 @@ export class EventResolver {
         .take(take)
         .getMany();
 
+        console.log(events.length);
       return { ok: true, nodes: events };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
@@ -196,7 +197,7 @@ export class EventResolver {
               new Brackets((qb2) => {
                 qb2
                   .where("Event.privacy =:privacy2", {
-                    privacy2: Privacy.FRIENDS,
+                    privacy2: Privacy.GROUP,
                   })
                   .andWhere("Event__creator.id IN (:...userIds1)", {
                     userIds1: [

@@ -30,6 +30,8 @@ import { createWannagoLoader } from "./resolvers/loaders/wannagoLoader";
 import * as admin from "firebase-admin";
 import { ChatNotificationResolver } from "./resolvers/chat_notification";
 import { customAuthChecker } from "./middleware/authorized";
+import { createGroupLoader } from "./resolvers/loaders/groupLoader";
+import { GroupResolver } from "./resolvers/group";
 var serviceAccount = require("../firebase-adminsdk.json");
 
 // import WebSocket from "ws";
@@ -129,6 +131,7 @@ const main = async () => {
       ChatResolver,
       ForumResolver,
       ChatNotificationResolver,
+      GroupResolver,
     ],
     validate: false,
     pubSub,
@@ -146,6 +149,7 @@ const main = async () => {
       chatLoader: createChatLoader(),
       forumLoader: createForumLoader(),
       wannagoLoader: createWannagoLoader(),
+      groupLoader: createGroupLoader(),
       isDataLoaderAttached: true,
     }),
   });

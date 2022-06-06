@@ -20,6 +20,7 @@ import { createAccessToken, createRefreshToken } from "../auth";
 import { Interest } from "../entities/Interest";
 import { ILike, In, MoreThan } from "typeorm";
 import * as admin from "firebase-admin";
+import { Group } from "../entities/Group";
 
 @Resolver(() => User)
 export class UserResolver {
@@ -39,6 +40,7 @@ export class UserResolver {
       user.inverseFriends = await User.findByIds(user.inverseFriendsIds);
       user.requestedFriends = await User.findByIds(user.requestedFriendsIds);
       user.friendRequests = await User.findByIds(user.friendRequestsIds);
+      user.groups = await Group.findByIds(user.groupsIds);
       return {
         nodes: user,
         ok: true,
@@ -369,9 +371,6 @@ export class UserResolver {
     try {
       var user = await User.findOneOrFail(payload?.userId, {
         relations: [
-          "interests",
-          "chatNotifications",
-          "myEvents",
           "blockedUsers",
         ],
       });
@@ -399,9 +398,6 @@ export class UserResolver {
       var userToBlock = await User.findOneOrFail(userId);
       var user = await User.findOneOrFail(payload?.userId, {
         relations: [
-          "interests",
-          "chatNotifications",
-          "myEvents",
           "blockedUsers",
         ],
       });
@@ -739,6 +735,13 @@ export class UserResolver {
   interests(@Root() user: User, @Ctx() { interestLoader }: MyContext) {
     return interestLoader.loadMany(
       user.interests.map((interest) => interest.id)
+    );
+  }
+
+  @FieldResolver()
+  async groups(@Root() user: User, @Ctx() { groupLoader }: MyContext) {
+    return groupLoader.loadMany(
+      user.groupsIds
     );
   }
 
