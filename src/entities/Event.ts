@@ -19,6 +19,7 @@ import { Interest } from "./Interest";
 import { Gender, Privacy } from "../types";
 import { Forum } from "./Forum";
 import { Wannago } from "./Wannago";
+import { Group } from "./Group";
 
 @ObjectType()
 @Entity()
@@ -113,9 +114,12 @@ export class Event extends BaseEntity {
   @Column({ type: "enum", enum: Privacy, default: Privacy.PUBLIC })
   privacy!: Privacy;
 
-  @Field(() => Int, {nullable: true})
-  @Column({nullable: true})
-  groupId: number;
+  @Field(() => Group)
+  @ManyToOne(() => Group, (g) => g.events, {
+    cascade: true,
+    onDelete: "SET NULL",
+  })
+  group: Group;
 
   @Field(() => Int)
   @Column({ default: 18 })

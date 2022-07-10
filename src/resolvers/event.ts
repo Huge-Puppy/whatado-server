@@ -22,6 +22,7 @@ import { Wannago } from "../entities/Wannago";
 import { DateRangeInput } from "./inputs/general";
 import { MoreThan, Brackets } from "typeorm";
 import * as admin from "firebase-admin";
+import { Group } from "../entities/Group";
 
 @Resolver(() => Event)
 export class EventResolver {
@@ -139,7 +140,7 @@ export class EventResolver {
         .take(take)
         .getMany();
 
-        console.log(events.length);
+      console.log(events.length);
       return { ok: true, nodes: events };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
@@ -283,6 +284,43 @@ export class EventResolver {
     }
   }
 
+  @Query(() => EventsApiResponse)
+  @UseMiddleware(isAuth)
+  async groupEvents(
+    @Arg("groupId", () => Int) groupId: number
+  ): Promise<EventsApiResponse> {
+    try {
+      return {
+        ok: true,
+        nodes: await Event.find({
+          where: {
+            group: {
+              id: groupId
+            }
+          },
+          relations: [
+            "relatedInterests",
+            "creator",
+            "wannago",
+            "wannago.user",
+            "invited",
+            "group",
+          ],
+        }),
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "event",
+            message: e.message,
+          },
+        ],
+      };
+    }
+  }
+
   @Query(() => EventApiResponse)
   @UseMiddleware(isAuth)
   async event(@Arg("id", () => Int) id: number): Promise<EventApiResponse> {
@@ -341,6 +379,11 @@ export class EventResolver {
         id: id,
       }));
 
+      let group: Group | undefined = undefined;
+      if (options.privacy == Privacy.GROUP) {
+        group = await Group.findOneOrFail({ id: options.groupId });
+      }
+
       const event = await Event.create({
         time: options.time,
         location: options.location,
@@ -355,6 +398,7 @@ export class EventResolver {
         creator: user,
         forum: forum,
         wannago: [],
+        group,
         invited,
         relatedInterests,
       }).save();

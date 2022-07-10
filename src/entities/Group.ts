@@ -8,9 +8,11 @@ import {
   ManyToMany,
   JoinTable,
   RelationId,
+  OneToMany,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
+import { Event } from "./Event";
 
 @ObjectType()
 @Entity()
@@ -18,6 +20,10 @@ export class Group extends BaseEntity {
   @Field(() => Int)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @Field(() => Int)
+  @Column()
+  owner: number;
 
   @Field(() => Date)
   @CreateDateColumn()
@@ -37,6 +43,13 @@ export class Group extends BaseEntity {
   })
   @JoinTable()
   users: User[];
+
+  @Field(() => [Event])
+  @OneToMany(() => Event, (event) => event.group, {
+    cascade: ["update", "insert"],
+  })
+  @JoinTable()
+  events: Event[];
 
   @Field(() => [Int])
   @RelationId((group: Group) => group.users)

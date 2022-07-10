@@ -24,6 +24,8 @@ export class EventInput implements Partial<Event>{
   wannagoIds: number[];
   @Field()
   filterLocation: string;
+  @Field(() => Int, {nullable : true})
+  groupId?: number;
   @Field(() => Float)
   filterRadius: number;
   @Field(() => Gender)
@@ -78,4 +80,6 @@ export class EventFilterInput implements Partial<Event>{
   forumId?: number;
   @Field(() => [Int], { nullable: true })
   relatedInterestsIds?: number[];
+  @Field(() => Int, { nullable: true })
+  groupId?: number;
 }

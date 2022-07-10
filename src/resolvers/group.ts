@@ -12,19 +12,55 @@ import {
 import { GroupApiResponse, GroupsApiResponse } from "./outputs/modelOutputs";
 import { isAuth } from "../middleware/isAuth";
 import { Group } from "../entities/Group";
-import { GroupInput } from "./inputs/groupInput";
+import { GroupFilterInput, GroupInput } from "./inputs/groupInput";
 import { User } from "../entities/User";
 
 @Resolver(() => Group)
 export class GroupResolver {
   @Mutation(() => GroupApiResponse)
   @UseMiddleware(isAuth)
-  async createGroup(@Arg("options") options: GroupInput): Promise<GroupApiResponse> {
+  async updateGroup(
+    @Arg("options") options: GroupFilterInput,
+    @Ctx() { payload }: MyContext
+    ): Promise<GroupApiResponse> {
+    try {
+      const group = await Group.findOneOrFail(options.id);
+      if (options.userIds) {
+        const users = await User.findByIds(options.userIds);
+        group.users = users;
+      }
+      if (options.owner && +payload!.userId == options.owner) {
+        group.owner = options.owner
+      }
+      if (options.name) {
+        group.name = options.name;
+      }
+      await group.save();
+      return { ok: true, nodes: group};
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "updating group",
+            message: `error updating group: ${e.message}`,
+          },
+        ],
+      };
+    }
+  }
+
+  @Mutation(() => GroupApiResponse)
+  @UseMiddleware(isAuth)
+  async createGroup(
+    @Arg("options") options: GroupInput,
+    ): Promise<GroupApiResponse> {
     try {
       const users = options.userIds.map((id) => ({
         id: id,
       }));
       const group = await Group.create({
+        owner: options.owner,
         name: options.name,
         users
       }).save();

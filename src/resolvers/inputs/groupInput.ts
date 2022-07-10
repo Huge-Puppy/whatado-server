@@ -9,13 +9,16 @@ export class GroupInput implements Partial<Group>{
   @Field()
   name: string;
 
+  @Field(() => Int)
+  owner: number;
+
   @Field(() => [Int])
   userIds: number[];
 
 }
 
 @InputType()
-export class InterestFilterInput implements Partial<Group>{
+export class GroupFilterInput implements Partial<Group>{
  @Field(() => Int, {nullable: true})
   id?: number;
 
@@ -27,6 +30,9 @@ export class InterestFilterInput implements Partial<Group>{
 
   @Field({nullable: true})
   name?: string;
+
+  @Field(() => Int, {nullable: true})
+  owner?: number;
 
   @Field(() => [Int], {nullable: true})
   userIds?: number[];
