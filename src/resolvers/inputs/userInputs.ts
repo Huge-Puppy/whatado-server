@@ -1,6 +1,8 @@
 import { User } from "../../entities/User";
 import { Field, InputType, Int } from "type-graphql";
 import { Gender } from "../../types";
+import { PointScalar } from "../../graphql_types/graphql_types";
+import { Point } from "geojson";
 
 @InputType()
 export class UserInput {
@@ -14,6 +16,8 @@ export class UserInput {
   birthday?: Date;
   @Field(() => Gender, { nullable: true })
   gender?: Gender;
+  @Field(() => PointScalar, { nullable: true })
+  location?: Point;
 }
 
 @InputType()
@@ -38,4 +42,6 @@ export class UserFilterInput implements Partial<User> {
   verified?: boolean;
   @Field(() => Gender, { nullable: true })
   gender?: Gender;
+  @Field(() => PointScalar, { nullable: true })
+  location?: Point;
 }

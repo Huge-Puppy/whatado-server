@@ -199,8 +199,8 @@ export class ChatResolver extends BaseEntity {
         notification: {
           title: `New ${survey ? "Survey" : "Message"} from ${author.name}`,
           body:
-            chat.text.length > 20
-              ? `${chat.text.substring(0, 20)}...`
+            chat.text.length > 50
+              ? `${chat.text.substring(0, 50)}...`
               : chat.text,
         },
       };

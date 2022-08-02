@@ -12,6 +12,7 @@ import {
   ManyToOne,
   RelationId,
   OneToMany,
+  Index,
 } from "typeorm";
 import { Field, Float, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
@@ -20,6 +21,8 @@ import { Gender, Privacy } from "../types";
 import { Forum } from "./Forum";
 import { Wannago } from "./Wannago";
 import { Group } from "./Group";
+import { PointScalar } from "../graphql_types/graphql_types";
+import { Point } from "geojson";
 
 @ObjectType()
 @Entity()
@@ -43,6 +46,16 @@ export class Event extends BaseEntity {
   @Field()
   @Column({ default: "" })
   location!: string;
+
+  @Field(() => PointScalar)
+  @Index({ spatial: true })
+  @Column({
+    type: "point",
+    spatialFeatureType: "point",
+    srid: 4326,
+  })
+  coordinates?: Point;
+
 
   @Field({ nullable: true })
   @Column({ nullable: true })

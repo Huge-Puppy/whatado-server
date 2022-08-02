@@ -1,9 +1,11 @@
 import { Gender, Privacy } from "../../types";
 import { Event } from "../../entities/Event";
 import { Field, Float, InputType, Int } from "type-graphql";
+import { PointScalar } from "../../graphql_types/graphql_types";
+import { Point } from "geojson";
 
 @InputType()
-export class EventInput implements Partial<Event>{
+export class EventInput implements Partial<Event> {
   @Field(() => Int, { nullable: true })
   id?: number;
   @Field()
@@ -16,15 +18,17 @@ export class EventInput implements Partial<Event>{
   pictureUrl?: string;
   @Field()
   location: string;
-  @Field(() => [Int] )
+  @Field(() => PointScalar)
+  coordinates: Point;
+  @Field(() => [Int])
   relatedInterestsIds: number[];
-  @Field(() => [Int] )
+  @Field(() => [Int])
   invitedIds: number[];
-  @Field(() => [Int] )
+  @Field(() => [Int])
   wannagoIds: number[];
   @Field()
   filterLocation: string;
-  @Field(() => Int, {nullable : true})
+  @Field(() => Int, { nullable: true })
   groupId?: number;
   @Field(() => Float)
   filterRadius: number;
@@ -41,12 +45,12 @@ export class EventInput implements Partial<Event>{
 }
 
 @InputType()
-export class EventFilterInput implements Partial<Event>{
+export class EventFilterInput implements Partial<Event> {
   @Field(() => Int, { nullable: true })
   id?: number;
-  @Field(() => String, {nullable: true})
-  createdAt?:  Date;
-  @Field(() => String, {nullable: true})
+  @Field(() => String, { nullable: true })
+  createdAt?: Date;
+  @Field(() => String, { nullable: true })
   updatedAt?: Date;
   @Field({ nullable: true })
   title?: string;
@@ -58,6 +62,8 @@ export class EventFilterInput implements Partial<Event>{
   pictureUrl?: string;
   @Field({ nullable: true })
   location?: string;
+  @Field(() => PointScalar, { nullable: true })
+  coordinates?: Point;
   @Field({ nullable: true })
   filterLocation?: string;
   @Field(() => Float, { nullable: true })

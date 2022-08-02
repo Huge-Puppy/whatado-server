@@ -9,13 +9,16 @@ import {
   JoinTable,
   OneToMany,
   RelationId,
+  Index,
 } from "typeorm";
+import { Point } from "geojson";
 import { Authorized, Field, Int, ObjectType } from "type-graphql";
 import { Event } from "./Event";
 import { Interest } from "./Interest";
 import { ChatNotification } from "./ChatNotification";
 import { Gender } from "../types";
 import { Group } from "./Group";
+import { PointScalar } from "../graphql_types/graphql_types";
 
 @ObjectType()
 @Entity()
@@ -23,6 +26,16 @@ export class User extends BaseEntity {
   @Field(() => Int)
   @PrimaryGeneratedColumn()
   id!: number;
+
+  @Field(() => PointScalar, { nullable: true })
+  @Index({ spatial: true })
+  @Column({
+    type: "point",
+    spatialFeatureType: "point",
+    srid: 4326,
+    nullable: true,
+  })
+  location?: Point;
 
   @Field(() => Date)
   @CreateDateColumn()

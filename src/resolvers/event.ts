@@ -92,6 +92,12 @@ export class EventResolver {
           time1: dateRange.startDate,
           time2: dateRange.endDate,
         })
+        // .andWhere(
+        //   "ST_DWithin(Event.coordinates ::Geometry, :userLoc ::Geometry, 1)",
+        //   {
+        //     userLoc: `POINT(${me.location?.coordinates[0]} ${me.location?.coordinates[1]})`,
+        //   }
+        // )
         .andWhere("Event.filterMinAge <= :userAge1", { userAge1: age })
         .andWhere("Event.filterMaxAge >= :userAge2", { userAge2: age })
         .andWhere(
@@ -295,8 +301,8 @@ export class EventResolver {
         nodes: await Event.find({
           where: {
             group: {
-              id: groupId
-            }
+              id: groupId,
+            },
           },
           relations: [
             "relatedInterests",
@@ -359,7 +365,9 @@ export class EventResolver {
     try {
       // create cn for every invited user
       let cns: ChatNotification[] = [];
-      for (var tempId of [payload!.userId, ...options.invitedIds]) {
+      for (var tempId of [
+        ...new Set([payload!.userId, ...options.invitedIds]),
+      ]) {
         cns = cns.concat(
           await ChatNotification.create({
             user: { id: tempId as any },
@@ -387,6 +395,7 @@ export class EventResolver {
       const event = await Event.create({
         time: options.time,
         location: options.location,
+        coordinates: options.coordinates,
         pictureUrl: options.pictureUrl,
         title: options.title,
         description: options.description,
@@ -508,6 +517,12 @@ export class EventResolver {
           "forum",
         ],
       });
+      if (event.invited.some((u) => u.id == userId)) {
+        return {
+          ok: false,
+          errors: [{ field: "invite", message: "user already invited" }],
+        };
+      }
       event.invited = [...event.invited, user];
       await event.save();
       await ChatNotification.create({
@@ -594,11 +609,6 @@ export class EventResolver {
     @Arg("userId", () => Int) userId: number
   ): Promise<EventApiResponse> {
     try {
-      await Wannago.create({
-        declined: false,
-        user: { id: userId },
-        event: { id: eventId },
-      }).save();
       const event = await Event.findOneOrFail(eventId, {
         relations: [
           "creator",
@@ -608,6 +618,22 @@ export class EventResolver {
           "invited",
         ],
       });
+      if (event.wannago.some((w, _, __) => w.user.id == userId)) {
+        return {
+          ok: false,
+          errors: [
+            {
+              field: "wannago",
+              message: "wannago already exists for the event",
+            },
+          ],
+        };
+      }
+      await Wannago.create({
+        declined: false,
+        user: { id: userId },
+        event: { id: eventId },
+      }).save();
       const message = {
         data: { type: "event", eventId: `${event.id}` },
         notification: {
