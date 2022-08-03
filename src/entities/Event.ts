@@ -50,11 +50,11 @@ export class Event extends BaseEntity {
   @Field(() => PointScalar)
   @Index({ spatial: true })
   @Column({
-    type: "point",
+    type: "geometry",
     spatialFeatureType: "point",
     srid: 4326,
   })
-  coordinates?: Point;
+  coordinates: Point;
 
 
   @Field({ nullable: true })

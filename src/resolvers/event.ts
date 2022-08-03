@@ -76,6 +76,8 @@ export class EventResolver {
       }
       // const intIds = me.interests.map((i) => i.id);
       // get events filtered
+      console.log("jcl");
+      console.log((me.location as any)["x"]);
       const events = await Event.createQueryBuilder("Event")
         .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
         .leftJoinAndSelect("Event.creator", "Event__creator")
@@ -92,12 +94,20 @@ export class EventResolver {
           time1: dateRange.startDate,
           time2: dateRange.endDate,
         })
-        // .andWhere(
-        //   "ST_DWithin(Event.coordinates ::Geometry, :userLoc ::Geometry, 1)",
-        //   {
-        //     userLoc: `POINT(${me.location?.coordinates[0]} ${me.location?.coordinates[1]})`,
-        //   }
-        // )
+        .andWhere(
+          "ST_DWithin(Event.coordinates ::Geometry, :userLoc ::Geometry, 10)",
+          {
+            // userLoc: me.location,
+            userLoc: {
+              type: "Point",
+              coordinates: [
+                me.location?.coordinates[0],
+                me.location?.coordinates[1],
+              ],
+              crs: { type: "name", properties: { name: "EPSG:4326" } },
+            },
+          }
+        )
         .andWhere("Event.filterMinAge <= :userAge1", { userAge1: age })
         .andWhere("Event.filterMaxAge >= :userAge2", { userAge2: age })
         .andWhere(
@@ -365,12 +375,14 @@ export class EventResolver {
     try {
       // create cn for every invited user
       let cns: ChatNotification[] = [];
-      for (var tempId of [
-        ...new Set([payload!.userId, ...options.invitedIds]),
-      ]) {
+      const users = await User.findByIds([
+        payload!.userId,
+        ...options.invitedIds,
+      ]);
+      for (var user of users) {
         cns = cns.concat(
           await ChatNotification.create({
-            user: { id: tempId as any },
+            user: user,
             lastAccessed: new Date(),
           }).save()
         );
@@ -379,7 +391,6 @@ export class EventResolver {
         userNotifications: cns,
         chats: [],
       }).save();
-      const user = await User.findOneOrFail(options.creatorId);
       const relatedInterests = options.relatedInterestsIds.map((id) => ({
         id: id,
       }));
@@ -404,7 +415,7 @@ export class EventResolver {
         filterGender: options.filterGender,
         filterRadius: options.filterRadius,
         privacy: options.privacy,
-        creator: user,
+        creator: users.filter((u) => u.id == options.creatorId)[0],
         forum: forum,
         wannago: [],
         group,

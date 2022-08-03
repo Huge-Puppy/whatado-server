@@ -6,21 +6,33 @@ export const PointScalar = new GraphQLScalarType({
   description: "Geojson scalar point type",
   serialize(value: unknown): string {
     // check the type of received value
+    console.log("serialize");
     if (!(typeof value == "object")) {
-      throw new Error("PointScalar can only serialize Position values");
+      let formattedString = (value as string)
+        .replace("(", "[")
+        .replace(")", "]");
+      let val: number[] = JSON.parse(formattedString);
+      return JSON.stringify({ x: val[0], y: val[1] });
     }
     return JSON.stringify(value); // value sent to the client
   },
-  parseValue(value: unknown): string {
+  parseValue(value: unknown): any {
     // check the type of received value
+    console.log("parsevalue");
     if (typeof value !== "string") {
       throw new Error("PointScalar can only parse string values");
     }
-    let val :number[] = JSON.parse(value);
-    return `(${val[0]},${val[1]})`; // value from the client input variables
+    let val: number[] = JSON.parse(value);
+    let returnval = {
+      type: "Point",
+      coordinates: [val[0], val[1]],
+      crs: { type: "name", properties: { name: "EPSG:4326" } },
+    };
+    return returnval; // value from the client input variables
   },
   parseLiteral(ast): Point {
     // check the type of received value
+    console.log("parseliteral");
     if (ast.kind !== Kind.STRING) {
       throw new Error("PointScalar can only parse string values");
     }

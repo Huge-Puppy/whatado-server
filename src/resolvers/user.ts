@@ -502,6 +502,7 @@ export class UserResolver {
           finalmap[key] = themap[key];
         }
       }
+
       const user = await User.update(payload.userId, { ...finalmap });
 
       return {

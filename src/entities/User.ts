@@ -30,7 +30,7 @@ export class User extends BaseEntity {
   @Field(() => PointScalar, { nullable: true })
   @Index({ spatial: true })
   @Column({
-    type: "point",
+    type: "geometry",
     spatialFeatureType: "point",
     srid: 4326,
     nullable: true,

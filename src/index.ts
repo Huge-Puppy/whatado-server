@@ -32,6 +32,7 @@ import { ChatNotificationResolver } from "./resolvers/chat_notification";
 import { customAuthChecker } from "./middleware/authorized";
 import { createGroupLoader } from "./resolvers/loaders/groupLoader";
 import { GroupResolver } from "./resolvers/group";
+import axios from "axios";
 var serviceAccount = require("../firebase-adminsdk.json");
 
 // import WebSocket from "ws";
@@ -60,6 +61,53 @@ const main = async () => {
 
   app.get("/get_schema", async (_, res) => {
     return res.download(`${__dirname}/schema.graphql`, "schema.graphql");
+  });
+
+  app.get("/autocomplete", async (req, res) => {
+    const authorization = req.headers["authorization"];
+    const token = authorization?.split(" ")[1];
+    if (!token) {
+      return res.send({
+        data: null,
+      });
+    }
+    let payload: any = null;
+    payload = verify(token, process.env.ACCESS_TOKEN_SECRET!);
+    if (!payload) {
+      return res.send({
+        data: null,
+      });
+    }
+    const partial = req.query.partial;
+    const location = req.query.location;
+    const fields = "name,geometry";
+    let url: string = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${partial}&location=${location}&fields=${fields}&key=${process.env.PLACES_KEY}`;
+    let response = await axios.get(url);
+    let data = response.data;
+    return res.send({ data });
+  });
+
+  app.get("/place_details", async (req, res) => {
+    const authorization = req.headers["authorization"];
+    const token = authorization?.split(" ")[1];
+    if (!token) {
+      return res.send({
+        ok: null,
+      });
+    }
+    let payload: any = null;
+    payload = verify(token, process.env.ACCESS_TOKEN_SECRET!);
+    if (!payload) {
+      return res.send({
+        data: null,
+      });
+    }
+    const place_id = req.query.placeId;
+    const fields = "name,geometry";
+    let url: string = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=${fields}&key=${process.env.PLACES_KEY}`;
+    let response = await axios.get(url);
+    let data =  response.data;
+    return res.send({ data });
   });
 
   app.post("/refresh_token", async (req, res) => {
