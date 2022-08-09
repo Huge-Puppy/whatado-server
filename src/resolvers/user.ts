@@ -13,14 +13,19 @@ import {
 import { User } from "../entities/User";
 import argon2 from "argon2";
 import { isAuth } from "../middleware/isAuth";
-import { UserApiResponse, UsersApiResponse } from "./outputs/modelOutputs";
+import {
+  StringsApiResponse,
+  UserApiResponse,
+  UsersApiResponse,
+} from "./outputs/modelOutputs";
 import { UserFilterInput, UserInput } from "./inputs/userInputs";
 import { BoolApiResponse } from "./outputs/general";
 import { createAccessToken, createRefreshToken } from "../auth";
 import { Interest } from "../entities/Interest";
-import { ILike, In, MoreThan } from "typeorm";
+import { ILike, In, MoreThan, Not } from "typeorm";
 import * as admin from "firebase-admin";
 import { Group } from "../entities/Group";
+import { Referral } from "../entities/Referral";
 
 @Resolver(() => User)
 export class UserResolver {
@@ -43,6 +48,49 @@ export class UserResolver {
       user.groups = await Group.findByIds(user.groupsIds);
       return {
         nodes: user,
+        ok: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "User", message: e.message }],
+      };
+    }
+  }
+
+  @Query(() => StringsApiResponse)
+  @UseMiddleware(isAuth)
+  async numbersNotUsers(
+    @Arg("numbers", () => [String]) numbers: string[]
+  ): Promise<StringsApiResponse> {
+    try {
+      const users = await User.find({ where: { phone: In(numbers) } });
+      const usernumbers = users.map((u) => u.phone);
+      const returnval = numbers.filter((n) => !usernumbers.includes(n));
+      return {
+        nodes: returnval,
+        ok: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "User", message: e.message }],
+      };
+    }
+  }
+
+  @Query(() => UsersApiResponse)
+  @UseMiddleware(isAuth)
+  async usersFromContacts(
+    @Arg("numbers", () => [String]) numbers: String[],
+    @Ctx() { payload }: MyContext
+  ): Promise<UsersApiResponse> {
+    try {
+      const users = await User.find({
+        where: { phone: In(numbers), id: Not(payload?.userId) },
+      });
+      return {
+        nodes: users,
         ok: true,
       };
     } catch (e) {
@@ -310,6 +358,22 @@ export class UserResolver {
         ],
       };
     }
+
+    // check if user's phone has an entry in the Referral table. if exists, update to show they signed up. delete duplicates
+    var referrals = await Referral.find({
+      where: { phone: user.phone },
+      order: { createdAt: "ASC" },
+    });
+    for (var i = 0; i < referrals.length; i++) {
+      if (i == 0) {
+        referrals[i].signedUp = true;
+        await referrals[i].save();
+        continue;
+      }
+      await referrals[i].remove();
+    }
+
+    // create access tokens
     const accessToken = createAccessToken(user);
     const refreshToken = createRefreshToken(user);
 
@@ -370,9 +434,7 @@ export class UserResolver {
   ): Promise<BoolApiResponse> {
     try {
       var user = await User.findOneOrFail(payload?.userId, {
-        relations: [
-          "blockedUsers",
-        ],
+        relations: ["blockedUsers"],
       });
       user.blockedUsers = user.blockedUsers.filter((u) => u.id != userId);
       await user.save();
@@ -390,6 +452,31 @@ export class UserResolver {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
+  async inviteReferral(
+    @Arg("number", () => String) number: string,
+    @Ctx() { payload }: MyContext
+  ): Promise<BoolApiResponse> {
+    try {
+      var user = await User.findOneOrFail(payload?.userId);
+      await Referral.create({
+        phone: number,
+        user,
+        signedUp: false,
+      }).save();
+      return {
+        ok: true,
+        nodes: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "referral", message: e.message }],
+      };
+    }
+  }
+
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
   async blockUser(
     @Arg("userId", () => Int) userId: number,
     @Ctx() { payload }: MyContext
@@ -397,9 +484,7 @@ export class UserResolver {
     try {
       var userToBlock = await User.findOneOrFail(userId);
       var user = await User.findOneOrFail(payload?.userId, {
-        relations: [
-          "blockedUsers",
-        ],
+        relations: ["blockedUsers"],
       });
       user.blockedUsers = [...user.blockedUsers, userToBlock];
       await user.save();
@@ -741,9 +826,7 @@ export class UserResolver {
 
   @FieldResolver()
   async groups(@Root() user: User, @Ctx() { groupLoader }: MyContext) {
-    return groupLoader.loadMany(
-      user.groupsIds
-    );
+    return groupLoader.loadMany(user.groupsIds);
   }
 
   @FieldResolver()

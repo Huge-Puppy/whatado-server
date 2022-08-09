@@ -33,6 +33,7 @@ import { customAuthChecker } from "./middleware/authorized";
 import { createGroupLoader } from "./resolvers/loaders/groupLoader";
 import { GroupResolver } from "./resolvers/group";
 import axios from "axios";
+import { ReferralResolver } from "./resolvers/referral";
 var serviceAccount = require("../firebase-adminsdk.json");
 
 // import WebSocket from "ws";
@@ -180,6 +181,7 @@ const main = async () => {
       ForumResolver,
       ChatNotificationResolver,
       GroupResolver,
+      ReferralResolver,
     ],
     validate: false,
     pubSub,

@@ -8,6 +8,7 @@ import { Event } from "../../entities/Event";
 import { ChatNotification } from "../../entities/ChatNotification";
 import { Wannago } from "../../entities/Wannago";
 import { Group } from "../../entities/Group";
+import { Referral } from "../../entities/Referral";
 
 @ObjectType()
 export class ChatApiResponse extends ApiResponse(Chat) {}
@@ -44,12 +45,21 @@ export class InterestApiResponse extends ApiResponse(Interest) {}
 
 @ObjectType()
 export class InterestsApiResponse extends ApiListResponse(Interest) {}
+@ObjectType()
+export class ReferralsApiResponse extends ApiListResponse(Referral) {}
 
 @ObjectType()
-export class ChatNotificationsApiResponse extends ApiListResponse(ChatNotification) {}
+export class ReferralApiResponse extends ApiResponse(Referral) {}
 
 @ObjectType()
-export class ChatNotificationApiResponse extends ApiResponse(ChatNotification) {}
+export class ChatNotificationsApiResponse extends ApiListResponse(
+  ChatNotification
+) {}
+
+@ObjectType()
+export class ChatNotificationApiResponse extends ApiResponse(
+  ChatNotification
+) {}
 
 @ObjectType()
 export class WannagoApiResponse extends ApiListResponse(Wannago) {}
@@ -58,10 +68,10 @@ export class WannagoApiResponse extends ApiListResponse(Wannago) {}
 export class WannagosApiResponse extends ApiResponse(Wannago) {}
 
 @ObjectType()
-export class StringApiResponse extends ApiListResponse(String) {}
+export class StringsApiResponse extends ApiListResponse(String) {}
 
 @ObjectType()
-export class StringsApiResponse extends ApiResponse(String) {}
+export class StringApiResponse extends ApiResponse(String) {}
 
 @ObjectType()
 export class IntApiResponse extends ApiResponse(Number) {}

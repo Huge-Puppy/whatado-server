@@ -20,7 +20,7 @@ import { Gender, MyContext, Privacy, SortType } from "../types";
 import { ChatNotification } from "../entities/ChatNotification";
 import { Wannago } from "../entities/Wannago";
 import { DateRangeInput } from "./inputs/general";
-import { MoreThan, Brackets } from "typeorm";
+import { MoreThan, Brackets, ILike } from "typeorm";
 import * as admin from "firebase-admin";
 import { Group } from "../entities/Group";
 
@@ -281,13 +281,44 @@ export class EventResolver {
 
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
+  async searchEvents(
+    @Arg("partial", () => String) partial: String,
+    ): Promise<EventsApiResponse> {
+    try {
+      const events = await Event.find({where: {title: ILike(`%${partial}%`)},
+          relations: [
+            "relatedInterests",
+            "creator",
+            "wannago",
+            "invited",
+            "wannago.user",
+          ],
+        }
+      );
+      return { ok: true, nodes: events };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "myevent server", message: e.message }],
+      };
+    }
+  }
+
+  @Query(() => EventsApiResponse)
+  @UseMiddleware(isAuth)
   async myEvents(@Ctx() { payload }: MyContext): Promise<EventsApiResponse> {
     try {
       const me = await User.findOneOrFail(payload?.userId);
       const events = await Event.findByIds(
         [...me.invitedEventsIds, ...me.myEventsIds],
         {
-          relations: ["relatedInterests", "creator", "wannago", "invited"],
+          relations: [
+            "relatedInterests",
+            "creator",
+            "wannago",
+            "invited",
+            "wannago.user",
+          ],
           order: { time: "ASC" },
         }
       );

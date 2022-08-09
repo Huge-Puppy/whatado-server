@@ -14,6 +14,7 @@ import { isAuth } from "../middleware/isAuth";
 import { Group } from "../entities/Group";
 import { GroupFilterInput, GroupInput } from "./inputs/groupInput";
 import { User } from "../entities/User";
+import { ILike } from "typeorm";
 
 @Resolver(() => Group)
 export class GroupResolver {
@@ -22,7 +23,7 @@ export class GroupResolver {
   async updateGroup(
     @Arg("options") options: GroupFilterInput,
     @Ctx() { payload }: MyContext
-    ): Promise<GroupApiResponse> {
+  ): Promise<GroupApiResponse> {
     try {
       const group = await Group.findOneOrFail(options.id);
       if (options.userIds) {
@@ -30,13 +31,13 @@ export class GroupResolver {
         group.users = users;
       }
       if (options.owner && +payload!.userId == options.owner) {
-        group.owner = options.owner
+        group.owner = options.owner;
       }
       if (options.name) {
         group.name = options.name;
       }
       await group.save();
-      return { ok: true, nodes: group};
+      return { ok: true, nodes: group };
     } catch (e) {
       return {
         ok: false,
@@ -53,8 +54,8 @@ export class GroupResolver {
   @Mutation(() => GroupApiResponse)
   @UseMiddleware(isAuth)
   async createGroup(
-    @Arg("options") options: GroupInput,
-    ): Promise<GroupApiResponse> {
+    @Arg("options") options: GroupInput
+  ): Promise<GroupApiResponse> {
     try {
       const users = options.userIds.map((id) => ({
         id: id,
@@ -62,7 +63,7 @@ export class GroupResolver {
       const group = await Group.create({
         owner: options.owner,
         name: options.name,
-        users
+        users,
       }).save();
       return { ok: true, nodes: group };
     } catch (e) {
@@ -80,12 +81,37 @@ export class GroupResolver {
 
   @Query(() => GroupsApiResponse)
   @UseMiddleware(isAuth)
-  async myGroups(
-    @Ctx() { payload }: MyContext
+  async searchGroups(
+    @Arg("partial", () => String) partial: String
   ): Promise<GroupsApiResponse> {
+    //TODO implement pagination
     try {
-      const me = await User.findOneOrFail(payload?.userId, {relations: ["groups", "groups.users"]});
-      return { ok: true, nodes: me.groups};
+      const groups = await Group.find({
+        where: { name: ILike(`%${partial}%`) },
+        take: 50,
+      });
+      return { ok: true, nodes: groups };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "group",
+            message: `error finding groups: ${e.message}`,
+          },
+        ],
+      };
+    }
+  }
+
+  @Query(() => GroupsApiResponse)
+  @UseMiddleware(isAuth)
+  async myGroups(@Ctx() { payload }: MyContext): Promise<GroupsApiResponse> {
+    try {
+      const me = await User.findOneOrFail(payload?.userId, {
+        relations: ["groups", "groups.users"],
+      });
+      return { ok: true, nodes: me.groups };
     } catch (e) {
       return {
         ok: false,
@@ -101,8 +127,6 @@ export class GroupResolver {
 
   @FieldResolver()
   async users(@Root() group: Group, @Ctx() { userLoader }: MyContext) {
-    return userLoader.loadMany(
-      group.userIds
-    );
+    return userLoader.loadMany(group.userIds);
   }
 }
