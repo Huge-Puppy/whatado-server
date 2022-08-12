@@ -15,6 +15,7 @@ import { Group } from "../entities/Group";
 import { GroupFilterInput, GroupInput } from "./inputs/groupInput";
 import { User } from "../entities/User";
 import { ILike } from "typeorm";
+import { GroupIcon } from "../entities/GroupIcon";
 
 @Resolver(() => Group)
 export class GroupResolver {
@@ -63,6 +64,9 @@ export class GroupResolver {
       const group = await Group.create({
         owner: options.owner,
         name: options.name,
+        screened: options.screened,
+        location: options.location,
+        icon: { id: options.groupIconId } as any,
         users,
       }).save();
       return { ok: true, nodes: group };
@@ -88,6 +92,7 @@ export class GroupResolver {
     try {
       const groups = await Group.find({
         where: { name: ILike(`%${partial}%`) },
+        relations: ["icon"],
         take: 50,
       });
       return { ok: true, nodes: groups };
@@ -109,7 +114,7 @@ export class GroupResolver {
   async myGroups(@Ctx() { payload }: MyContext): Promise<GroupsApiResponse> {
     try {
       const me = await User.findOneOrFail(payload?.userId, {
-        relations: ["groups", "groups.users"],
+        relations: ["groups", "groups.users", "groups.icon"],
       });
       return { ok: true, nodes: me.groups };
     } catch (e) {
@@ -128,5 +133,10 @@ export class GroupResolver {
   @FieldResolver()
   async users(@Root() group: Group, @Ctx() { userLoader }: MyContext) {
     return userLoader.loadMany(group.userIds);
+  }
+
+  @FieldResolver()
+  async icon(@Root() icon: GroupIcon, @Ctx() { groupIconLoader }: MyContext) {
+    return groupIconLoader.load(icon.id);
   }
 }

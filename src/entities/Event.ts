@@ -14,7 +14,7 @@ import {
   OneToMany,
   Index,
 } from "typeorm";
-import { Field, Float, Int, ObjectType } from "type-graphql";
+import { Authorized, Field, Float, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
 import { Interest } from "./Interest";
 import { Gender, Privacy } from "../types";
@@ -43,10 +43,12 @@ export class Event extends BaseEntity {
   @Column({ type: "timestamptz" })
   time: Date;
 
+  @Authorized("Member")
   @Field()
   @Column({ default: "" })
   location!: string;
 
+  @Authorized("Member")
   @Field(() => PointScalar)
   @Index({ spatial: true })
   @Column({
@@ -73,6 +75,10 @@ export class Event extends BaseEntity {
   @Column({ default: 0 })
   flags!: number;
 
+  @Field()
+  @Column({ default: true })
+  screened: boolean;
+
   @Field(() => User)
   @ManyToOne(() => User, (user) => user.myEvents, {
     onDelete: "CASCADE",
@@ -82,12 +88,14 @@ export class Event extends BaseEntity {
   @RelationId((event: Event) => event.creator)
   creatorId: number;
 
+  @Authorized("Member")
   @Field(() => [Wannago])
   @OneToMany(() => Wannago, (wannago) => wannago.event, {
     cascade: ["update", "insert"],
   })
   wannago: Wannago[];
 
+  @Authorized("Member")
   @Field(() => [User])
   @ManyToMany(() => User, (user) => user.invitedEvents, {
     cascade: ["update", "insert"],
@@ -103,6 +111,7 @@ export class Event extends BaseEntity {
   @JoinTable()
   relatedInterests: Interest[];
 
+  @Authorized("Member")
   @Field(() => Forum)
   @OneToOne(() => Forum, (forum) => forum.event, {
     onDelete: "CASCADE",
@@ -111,14 +120,17 @@ export class Event extends BaseEntity {
   @JoinColumn()
   forum: Forum;
 
+  @Authorized("Member")
   @Field()
   @Column({ default: "" })
   filterLocation!: string;
 
+  @Authorized("Member")
   @Field(() => Float)
   @Column({ type: "float" })
   filterRadius!: number;
 
+  @Authorized("Member")
   @Field(() => Gender)
   @Column({ type: "enum", enum: Gender, default: Gender.BOTH })
   filterGender!: Gender;
@@ -127,6 +139,7 @@ export class Event extends BaseEntity {
   @Column({ type: "enum", enum: Privacy, default: Privacy.PUBLIC })
   privacy!: Privacy;
 
+  @Authorized("Member")
   @Field(() => Group)
   @ManyToOne(() => Group, (g) => g.events, {
     cascade: true,
@@ -134,10 +147,12 @@ export class Event extends BaseEntity {
   })
   group: Group;
 
+  @Authorized("Member")
   @Field(() => Int)
   @Column({ default: 18 })
   filterMinAge!: number;
 
+  @Authorized("Member")
   @Field(() => Int)
   @Column({ default: 40 })
   filterMaxAge!: number;

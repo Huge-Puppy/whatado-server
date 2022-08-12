@@ -45,7 +45,7 @@ export class UserResolver {
       user.inverseFriends = await User.findByIds(user.inverseFriendsIds);
       user.requestedFriends = await User.findByIds(user.requestedFriendsIds);
       user.friendRequests = await User.findByIds(user.friendRequestsIds);
-      user.groups = await Group.findByIds(user.groupsIds);
+      user.groups = await Group.findByIds(user.groupsIds, {relations: ["icon"]});
       return {
         nodes: user,
         ok: true,

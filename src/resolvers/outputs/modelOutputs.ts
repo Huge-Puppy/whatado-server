@@ -9,6 +9,7 @@ import { ChatNotification } from "../../entities/ChatNotification";
 import { Wannago } from "../../entities/Wannago";
 import { Group } from "../../entities/Group";
 import { Referral } from "../../entities/Referral";
+import { GroupIcon } from "../../entities/GroupIcon";
 
 @ObjectType()
 export class ChatApiResponse extends ApiResponse(Chat) {}
@@ -45,6 +46,12 @@ export class InterestApiResponse extends ApiResponse(Interest) {}
 
 @ObjectType()
 export class InterestsApiResponse extends ApiListResponse(Interest) {}
+
+@ObjectType()
+export class GroupIconsApiResponse extends ApiListResponse(GroupIcon) {}
+
+@ObjectType()
+export class GroupIconResponse extends ApiResponse(GroupIcon) {}
 @ObjectType()
 export class ReferralsApiResponse extends ApiListResponse(Referral) {}
 

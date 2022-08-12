@@ -34,6 +34,8 @@ import { createGroupLoader } from "./resolvers/loaders/groupLoader";
 import { GroupResolver } from "./resolvers/group";
 import axios from "axios";
 import { ReferralResolver } from "./resolvers/referral";
+import { GroupIconResolver } from "./resolvers/groupIcon";
+import { createGroupIconLoader } from "./resolvers/loaders/groupIconLoader";
 var serviceAccount = require("../firebase-adminsdk.json");
 
 // import WebSocket from "ws";
@@ -182,6 +184,7 @@ const main = async () => {
       ChatNotificationResolver,
       GroupResolver,
       ReferralResolver,
+      GroupIconResolver,
     ],
     validate: false,
     pubSub,
@@ -200,6 +203,7 @@ const main = async () => {
       forumLoader: createForumLoader(),
       wannagoLoader: createWannagoLoader(),
       groupLoader: createGroupLoader(),
+      groupIconLoader: createGroupIconLoader(),
       isDataLoaderAttached: true,
     }),
   });

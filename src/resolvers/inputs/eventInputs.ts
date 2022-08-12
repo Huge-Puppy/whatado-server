@@ -42,6 +42,8 @@ export class EventInput implements Partial<Event> {
   filterMaxAge: number;
   @Field(() => Int)
   creatorId: number;
+  @Field()
+  screened: boolean;
 }
 
 @InputType()
@@ -88,4 +90,6 @@ export class EventFilterInput implements Partial<Event> {
   relatedInterestsIds?: number[];
   @Field(() => Int, { nullable: true })
   groupId?: number;
+  @Field({ nullable: true })
+  screened?: boolean;
 }
