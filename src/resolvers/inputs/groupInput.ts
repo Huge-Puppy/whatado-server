@@ -37,6 +37,8 @@ export class GroupFilterInput implements Partial<Group> {
   owner?: number;
   @Field(() => [Int], { nullable: true })
   userIds?: number[];
+  @Field(() => [Int], { nullable: true })
+  requestedIds?: number[];
   @Field(() => PointScalar, {nullable: true})
   location?: Point;
   @Field({ nullable: true })

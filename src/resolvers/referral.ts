@@ -1,6 +1,7 @@
 import {
   Arg,
   Ctx,
+  Int,
   Mutation,
   Query,
   Resolver,
@@ -42,13 +43,17 @@ export class ReferralResolver extends BaseEntity {
   @UseMiddleware(isAuth)
   async createReferral(
     @Ctx() { payload }: MyContext,
-    @Arg("phone", () => String) phone: string
+    @Arg("phone", () => String) phone: string,
+    @Arg("eventId", () => Int) eventId: number,
+    @Arg("eventId", () => Int) groupId: number
   ): Promise<BoolApiResponse> {
     try {
       const user = await User.findOneOrFail(payload?.userId);
       await Referral.create({
         user,
         phone,
+        groupId,
+        eventId,
         signedUp: false,
       }).save();
       // send validation text

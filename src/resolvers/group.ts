@@ -3,6 +3,7 @@ import {
   Arg,
   Ctx,
   FieldResolver,
+  Int,
   Mutation,
   Query,
   Resolver,
@@ -16,6 +17,8 @@ import { GroupFilterInput, GroupInput } from "./inputs/groupInput";
 import { User } from "../entities/User";
 import { ILike } from "typeorm";
 import { GroupIcon } from "../entities/GroupIcon";
+import * as admin from "firebase-admin";
+import { BoolApiResponse } from "./outputs/general";
 
 @Resolver(() => Group)
 export class GroupResolver {
@@ -26,13 +29,60 @@ export class GroupResolver {
     @Ctx() { payload }: MyContext
   ): Promise<GroupApiResponse> {
     try {
-      const group = await Group.findOneOrFail(options.id);
+      const group = await Group.findOneOrFail(options.id, {
+        relations: ["users", "requested"],
+      });
+      if (!group.users.map((u) => u.id).includes(+payload!.userId)) {
+        return {
+          ok: false,
+          errors: [
+            {
+              field: "updating group",
+              message: `no access to group`,
+            },
+          ],
+        };
+      }
       if (options.userIds) {
         const users = await User.findByIds(options.userIds);
         group.users = users;
+
+        const newUsers = users.filter((u) => group.requested.includes(u));
+        group.requested = group.requested.filter((u) => !users.includes(u));
+        const message = {
+          data: { type: "group", groupId: `${group.id}` },
+          notification: {
+            title: "New Group",
+            body: `You've been added to the ${group.name} group!`,
+          },
+        };
+        const option = {
+          contentAvailable: true,
+          priority: "high",
+        };
+        for (var user of newUsers) {
+          await admin
+            .messaging()
+            .sendToDevice(user.deviceId, message, option)
+            .then((response) => {
+              console.log("Successfully sent message:", response);
+            })
+            .catch((error) => {
+              console.log("Error sending message:", error);
+            });
+        }
       }
       if (options.owner && +payload!.userId == options.owner) {
         group.owner = options.owner;
+      }
+      if (options.groupIconId) {
+        group.icon = {id: options.groupIconId} as any;
+      }
+      if (options.location) {
+        group.location = options.location;
+      }
+      if (options.screened) {
+        group.screened = options.screened;
       }
       if (options.name) {
         group.name = options.name;
@@ -46,6 +96,32 @@ export class GroupResolver {
           {
             field: "updating group",
             message: `error updating group: ${e.message}`,
+          },
+        ],
+      };
+    }
+  }
+  
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async requestGroup(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { payload }: MyContext
+  ): Promise<BoolApiResponse> {
+    try {
+      const group = await Group.findOneOrFail(id, {
+        relations: ["requested"],
+      });
+      group.requested = [...group.requested, {id: +payload!.userId} as any];
+      await group.save();
+      return { ok: true, nodes: true };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "requesting group",
+            message: `error requesting group: ${e.message}`,
           },
         ],
       };

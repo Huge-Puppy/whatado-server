@@ -12,7 +12,7 @@ import {
   Index,
   ManyToOne,
 } from "typeorm";
-import { Authorized, Field, Int, ObjectType } from "type-graphql";
+import { Field, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
 import { Event } from "./Event";
 import { GroupPhone } from "./GroupPhone";
@@ -60,22 +60,19 @@ export class Group extends BaseEntity {
   @ManyToOne(() => GroupIcon)
   icon: GroupIcon;
 
-  @Authorized("Member")
   @Field(() => [GroupPhone])
   @OneToMany(() => GroupPhone, (g) => g.group, {
     cascade: ["insert", "update"],
   })
   invitedNumbers: GroupPhone[];
 
-  @Authorized("Member")
   @Field(() => [User])
-  @ManyToMany(() => User, (user) => user.groups, {
+  @ManyToMany(() => User, (user) => user.requestedGroups, {
     cascade: ["insert", "update"],
   })
   @JoinTable()
   requested: User[];
 
-  @Authorized("Member")
   @Field(() => [User])
   @ManyToMany(() => User, (user) => user.groups, {
     cascade: ["insert", "update"],
@@ -83,7 +80,6 @@ export class Group extends BaseEntity {
   @JoinTable()
   users: User[];
 
-  @Authorized("Member")
   @Field(() => [Event])
   @OneToMany(() => Event, (event) => event.group, {
     cascade: ["update", "insert"],
@@ -91,7 +87,6 @@ export class Group extends BaseEntity {
   @JoinTable()
   events: Event[];
 
-  @Authorized("Member")
   @Field(() => [Int])
   @RelationId((group: Group) => group.users)
   userIds: number[];

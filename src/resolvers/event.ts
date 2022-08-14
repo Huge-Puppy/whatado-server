@@ -421,12 +421,14 @@ export class EventResolver {
       const forum = await Forum.create({
         userNotifications: cns,
         chats: [],
+        chatDisabled: options.chatDisabled ?? false,
+        moderators: [{id: payload!.userId} as any],
       }).save();
       const relatedInterests = options.relatedInterestsIds.map((id) => ({
         id: id,
       }));
       const invited = options.invitedIds.map((id) => ({
-        id: id,
+        id: id, 
       }));
 
       let group: Group | undefined = undefined;
@@ -451,6 +453,7 @@ export class EventResolver {
         wannago: [],
         group,
         invited,
+        screened: options.screened,
         relatedInterests,
       }).save();
 

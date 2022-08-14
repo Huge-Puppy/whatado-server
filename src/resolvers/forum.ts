@@ -42,11 +42,11 @@ export class ForumResolver extends BaseEntity {
     @Arg("ids", () => [Int!]!) ids: number[],
     @Ctx() { payload }: MyContext
   ): Promise<ForumsApiResponse> {
-    // TODO: only get usernotifications for the logged in user in field resolver
     try {
       const forums = await Forum.createQueryBuilder("Forum")
         .leftJoinAndSelect("Forum.chats", "Forum__chats")
         .leftJoinAndSelect("Forum.event", "Forum__event")
+        .leftJoinAndSelect("Forum.moderators", "Forum__moderators")
         .leftJoinAndSelect(
           "Forum.userNotifications",
           "Forum__userNotifications"
@@ -54,6 +54,7 @@ export class ForumResolver extends BaseEntity {
         .relation("chats")
         .relation("event")
         .relation("userNotifications")
+        .relation("moderators")
         .select()
         .where("Forum__event.id IN (:...ids)", {
           ids: ids,

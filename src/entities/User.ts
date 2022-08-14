@@ -154,6 +154,14 @@ export class User extends BaseEntity {
   @JoinTable()
   requestedFriends: User[];
 
+  @Field(() => [Group])
+  @ManyToMany(() => Group, (g) => g.requested, {
+    cascade: ["insert", "update"],
+    onDelete: "CASCADE",
+  })
+  @JoinTable()
+  requestedGroups: Group[];
+
   @Field(() => [Int])
   @RelationId((user: User) => user.requestedFriends)
   requestedFriendsIds: number[];

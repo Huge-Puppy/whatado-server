@@ -44,6 +44,8 @@ export class EventInput implements Partial<Event> {
   creatorId: number;
   @Field()
   screened: boolean;
+  @Field()
+  chatDisabled: boolean;
 }
 
 @InputType()

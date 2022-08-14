@@ -30,6 +30,14 @@ export class Referral extends BaseEntity {
   @Column()
   phone: string;
 
+  @Field(() => Int, {nullable: true})
+  @Column({nullable: true})
+  eventId?: number;
+
+  @Field(() => Int, {nullable: true})
+  @Column({nullable: true})
+  groupId?: number;
+
   @Field()
   @Column()
   signedUp: boolean;

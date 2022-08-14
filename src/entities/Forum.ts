@@ -6,12 +6,16 @@ import {
   BaseEntity,
   OneToOne,
   OneToMany,
+  Column,
+  JoinTable,
+  ManyToMany,
   // Column,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { Chat } from "./Chat";
 import { Event } from "./Event";
 import { ChatNotification } from "./ChatNotification";
+import { User } from "./User";
 
 @ObjectType()
 @Entity()
@@ -49,7 +53,14 @@ export class Forum extends BaseEntity {
   })
   event: Event;
 
-  // @Field(() => Int)
-  // @Column({type: "int"})
-  // eventId: number;
+  @Field()
+  @Column()
+  chatDisabled: boolean;
+
+  @Field(() => [User])
+  @ManyToMany(() => User, {
+    cascade: ["insert", "update"],
+  })
+  @JoinTable()
+  moderators: User[];
 }
