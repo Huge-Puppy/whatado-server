@@ -23,6 +23,7 @@ import { DateRangeInput } from "./inputs/general";
 import { MoreThan, Brackets, ILike } from "typeorm";
 import * as admin from "firebase-admin";
 import { Group } from "../entities/Group";
+import { Interest } from "../entities/Interest";
 
 @Resolver(() => Event)
 export class EventResolver {
@@ -74,21 +75,14 @@ export class EventResolver {
           age--;
         }
       }
-      // const intIds = me.interests.map((i) => i.id);
+      const intIds = me.interests.map((i) => i.id);
       // get events filtered
-      console.log("jcl");
-      console.log((me.location as any)["x"]);
       const events = await Event.createQueryBuilder("Event")
         .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
         .leftJoinAndSelect("Event.creator", "Event__creator")
         .leftJoinAndSelect("Event.wannago", "Event__wannago")
         .leftJoinAndSelect("Event.invited", "Event__invited")
         .leftJoinAndSelect("Event__wannago.user", "Event__wannago__user")
-        .relation("relatedInterests")
-        .relation("creator")
-        .relation("wannago")
-        .relation("wannago.user")
-        .relation("invited")
         .select()
         .where("Event.time BETWEEN :time1 AND :time2", {
           time1: dateRange.startDate,
@@ -140,14 +134,14 @@ export class EventResolver {
             });
           })
         )
-        // .andWhere(
-        //   new Brackets((qb) => {
-        //     qb.where("Event_Event__relatedInterests.eventId IS NULL").orWhere(
-        //       "Event__relatedInterests.id IN (:...intIds)",
-        //       { intIds }
-        //     );
-        //   })
-        // )
+        .andWhere(
+          new Brackets((qb) => {
+            qb.where("Event_Event__relatedInterests.eventId IS NULL").orWhere(
+              "Event__relatedInterests.id IN (:...intIds)",
+              { intIds }
+            );
+          })
+        )
         .orderBy(
           sortType === SortType.SOONEST ? "Event.time" : "Event.createdAt",
           sortType === SortType.SOONEST ? "ASC" : "DESC"
@@ -188,17 +182,13 @@ export class EventResolver {
       }
       const intIds = me.interests.map((i) => i.id);
       // get events filtered
-      const events = await Event.createQueryBuilder("Event")
-        .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
+      const qb = Event.createQueryBuilder("Event");
+      const events = await qb
+        .innerJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
         .leftJoinAndSelect("Event.creator", "Event__creator")
         .leftJoinAndSelect("Event.wannago", "Event__wannago")
         .leftJoinAndSelect("Event.invited", "Event__invited")
         .leftJoinAndSelect("Event__wannago.user", "Event__wannago__user")
-        .relation("relatedInterests")
-        .relation("creator")
-        .relation("wannago")
-        .relation("wannago.user")
-        .relation("invited")
         .select()
         .where("Event.time BETWEEN :time1 AND :time2", {
           time1: dateRange.startDate,
@@ -207,44 +197,54 @@ export class EventResolver {
         .andWhere("Event.filterMinAge <= :userAge1", { userAge1: age })
         .andWhere("Event.filterMaxAge >= :userAge2", { userAge2: age })
         .andWhere(
-          new Brackets((qb) => {
-            qb.where("Event.privacy = :privacy1", {
-              privacy1: Privacy.PUBLIC,
-            }).orWhere(
-              new Brackets((qb2) => {
-                qb2
-                  .where("Event.privacy =:privacy2", {
-                    privacy2: Privacy.GROUP,
-                  })
-                  .andWhere("Event__creator.id IN (:...userIds1)", {
-                    userIds1: [
-                      ...me.friends.map((f) => f.id),
-                      ...me.inverseFriends.map((f) => f.id),
-                      0,
-                    ],
-                  });
+          new Brackets((qb2) => {
+            qb2
+              .where("Event.privacy = :privacy1", {
+                privacy1: Privacy.PUBLIC,
               })
-            );
+              .orWhere(
+                new Brackets((qb3) => {
+                  qb3
+                    .where("Event.privacy =:privacy2", {
+                      privacy2: Privacy.GROUP,
+                    })
+                    .andWhere("Event__creator.id IN (:...userIds1)", {
+                      userIds1: [
+                        ...me.friends.map((f) => f.id),
+                        ...me.inverseFriends.map((f) => f.id),
+                        0,
+                      ],
+                    });
+                })
+              );
           })
         )
         .andWhere(
-          new Brackets((qb) => {
-            qb.where("Event.filterGender = :gender1", {
-              gender1: me.gender,
-            }).orWhere("Event.filterGender = :gender2", {
-              gender2: Gender.BOTH,
-            });
+          new Brackets((qb2) => {
+            qb2
+              .where("Event.filterGender = :gender1", {
+                gender1: me.gender,
+              })
+              .orWhere("Event.filterGender = :gender2", {
+                gender2: Gender.BOTH,
+              });
           })
         )
         .andWhere(
-          new Brackets((qb) => {
-            qb.where(
-              "Event_Event__relatedInterests.eventId IS NOT NULL"
-            ).andWhere("Event__relatedInterests.id NOT IN (:...intIds)", {
-              intIds,
-            });
-          })
+          "NOT EXISTS" +
+            qb
+              .subQuery()
+              .select()
+              .from(Event, "SubEvent")
+              .innerJoinAndSelect(
+                "SubEvent.relatedInterests",
+                "SubEvent__relatedInterests"
+              )
+              .where("SubEvent.id = Event.id")
+              .andWhere("SubEvent__relatedInterests.id IN (:...intIds)")
+              .getQuery()
         )
+        .setParameter("intIds", intIds)
         .orderBy(
           sortType === SortType.SOONEST ? "Event.time" : "Event.createdAt",
           sortType === SortType.SOONEST ? "ASC" : "DESC"
@@ -281,20 +281,127 @@ export class EventResolver {
 
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
-  async searchEvents(
-    @Arg("partial", () => String) partial: String,
-    ): Promise<EventsApiResponse> {
+  async suggestedEvents(
+    @Ctx() { payload }: MyContext
+  ): Promise<EventsApiResponse> {
     try {
-      const events = await Event.find({where: {title: ILike(`%${partial}%`)},
-          relations: [
-            "relatedInterests",
-            "creator",
-            "wannago",
-            "invited",
-            "wannago.user",
-          ],
+      const me = await User.findOneOrFail(payload!.userId, {
+        relations: ["interests", "friends", "inverseFriends"],
+      });
+      //calculate birthday
+      const now = new Date();
+      var age = now.getFullYear() - me.birthday.getFullYear();
+      if (now.getMonth() < me.birthday.getMonth()) {
+        age--;
+      } else if (now.getMonth() == me.birthday.getMonth()) {
+        if (now.getDay() < me.birthday.getDay()) {
+          age--;
         }
-      );
+      }
+      const intIds = me.interests.map((i) => i.id);
+      // get events filtered
+      const events = await Event.createQueryBuilder("Event")
+        .select()
+        .addSelect((subQuery) => {
+          return subQuery
+              .select('COUNT(u.id)', 'count')
+              .from(User, 'u')
+              .where('u.id = Event__invited.id');
+      }, 'count')
+      .orderBy('count', 'DESC')
+      .loadRelationCountAndMap('Event.invited', 'Event.invited')
+        .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
+        .leftJoinAndSelect("Event.creator", "Event__creator")
+        .leftJoinAndSelect("Event.wannago", "Event__wannago")
+        .leftJoinAndSelect("Event.invited", "Event__invited")
+        .leftJoinAndSelect("Event__wannago.user", "Event__wannago__user")
+        .where("Event.time > :time1", {
+          time1: now,
+        })
+        .andWhere(
+          "ST_DWithin(Event.coordinates ::Geometry, :userLoc ::Geometry, 10)",
+          {
+            userLoc: {
+              type: "Point",
+              coordinates: [
+                me.location?.coordinates[0],
+                me.location?.coordinates[1],
+              ],
+              crs: { type: "name", properties: { name: "EPSG:4326" } },
+            },
+          }
+        )
+        .andWhere("Event.filterMinAge <= :userAge1", { userAge1: age })
+        .andWhere("Event.filterMaxAge >= :userAge2", { userAge2: age })
+        .andWhere(
+          new Brackets((qb) => {
+            qb.where("Event.privacy = :privacy1", {
+              privacy1: Privacy.PUBLIC,
+            }).orWhere(
+              new Brackets((qb2) => {
+                qb2
+                  .where("Event.privacy =:privacy2", {
+                    privacy2: Privacy.GROUP,
+                  })
+                  .andWhere("Event__creator.id IN (:...userIds1)", {
+                    userIds1: [
+                      ...me.friends.map((f) => f.id),
+                      ...me.inverseFriends.map((f) => f.id),
+                      0,
+                    ],
+                  });
+              })
+            );
+          })
+        )
+        .andWhere(
+          new Brackets((qb) => {
+            qb.where("Event.filterGender = :gender1", {
+              gender1: me.gender,
+            }).orWhere("Event.filterGender = :gender2", {
+              gender2: Gender.BOTH,
+            });
+          })
+        )
+        .andWhere(
+          new Brackets((qb) => {
+            qb.where("Event_Event__relatedInterests.eventId IS NULL").orWhere(
+              "Event__relatedInterests.id IN (:...intIds)",
+              { intIds }
+            );
+          })
+        )
+        .take(10)
+        .getMany();
+
+        console.log('jcl', events);
+      return { ok: true, nodes: events };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "suggested events server", message: e.message }],
+      };
+    }
+  }
+
+  @Query(() => EventsApiResponse)
+  @UseMiddleware(isAuth)
+  async searchEvents(
+    @Arg("partial", () => String) partial: String
+  ): Promise<EventsApiResponse> {
+    // TODO implement pagination
+    try {
+      const events = await Event.find({
+        where: { title: ILike(`%${partial}%`) },
+        take: 50,
+        relations: [
+          "relatedInterests",
+          "creator",
+          "wannago",
+          "invited",
+          "wannago.user",
+        ],
+      });
       return { ok: true, nodes: events };
     } catch (e) {
       return {
@@ -422,13 +529,13 @@ export class EventResolver {
         userNotifications: cns,
         chats: [],
         chatDisabled: options.chatDisabled ?? false,
-        moderators: [{id: payload!.userId} as any],
+        moderators: [{ id: payload!.userId } as any],
       }).save();
       const relatedInterests = options.relatedInterestsIds.map((id) => ({
         id: id,
       }));
       const invited = options.invitedIds.map((id) => ({
-        id: id, 
+        id: id,
       }));
 
       let group: Group | undefined = undefined;
@@ -749,21 +856,28 @@ export class EventResolver {
   ): Promise<User> {
     return userLoader.load(event.creatorId);
   }
+
   @FieldResolver()
-  async wannago(@Root() event: Event, @Ctx() { wannagoLoader }: MyContext) {
-    if (event.wannago == null) return [];
-    return wannagoLoader.loadMany(event.wannago.map((wannago) => wannago.id));
-  }
-  @FieldResolver()
-  async invited(@Root() event: Event, @Ctx() { userLoader }: MyContext) {
-    if (event.invited == null) return [];
-    return userLoader.loadMany(event.invited.map((user) => user.id));
+  async wannago(@Root() event: Event) {
+    return Wannago.createQueryBuilder()
+      .relation(Event, "wannago")
+      .of(event)
+      .loadMany();
   }
 
   @FieldResolver()
-  relatedInterests(@Root() event: Event, @Ctx() { interestLoader }: MyContext) {
-    return interestLoader.loadMany(
-      event.relatedInterests.map((interest) => interest.id)
-    );
+  async invited(@Root() event: Event) {
+    return User.createQueryBuilder()
+      .relation(Event, "invited")
+      .of(event)
+      .loadMany();
+  }
+
+  @FieldResolver()
+  async relatedInterests(@Root() event: Event) {
+    return Interest.createQueryBuilder()
+      .relation(Event, "relatedInterests")
+      .of(event)
+      .loadMany();
   }
 }

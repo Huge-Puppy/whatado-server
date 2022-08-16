@@ -45,7 +45,7 @@ export class UserResolver {
       user.inverseFriends = await User.findByIds(user.inverseFriendsIds);
       user.requestedFriends = await User.findByIds(user.requestedFriendsIds);
       user.friendRequests = await User.findByIds(user.friendRequestsIds);
-      user.groups = await Group.findByIds(user.groupsIds, {relations: ["icon"]});
+      user.groups = await Group.findByIds(user.groupsIds, {relations: ["icon", "requested"]});
       user.requestedGroups = await Group.createQueryBuilder("Group")
         .leftJoinAndSelect("Group.requested", "Group__requested")
         .relation("requested")
@@ -203,6 +203,23 @@ export class UserResolver {
   async users(): Promise<UsersApiResponse> {
     try {
       const users = await User.find();
+      return { ok: true, nodes: users };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [{ field: "Users", message: e.message }],
+      };
+    }
+  }
+
+
+  @Query(() => UsersApiResponse)
+  @UseMiddleware(isAuth)
+  async suggestedUsers(): Promise<UsersApiResponse> {
+    try {
+      const users = await User.find({
+        take: 50,
+      });
       return { ok: true, nodes: users };
     } catch (e) {
       return {
@@ -833,6 +850,11 @@ export class UserResolver {
   @FieldResolver()
   async groups(@Root() user: User, @Ctx() { groupLoader }: MyContext) {
     return groupLoader.loadMany(user.groupsIds);
+  }
+
+  @FieldResolver()
+  async requestedGroups(@Root() user: User, @Ctx() { groupLoader }: MyContext) {
+    return groupLoader.loadMany(user.requestedGroups.map((g) => g.id));
   }
 
   @FieldResolver()

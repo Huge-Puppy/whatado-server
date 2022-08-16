@@ -13,7 +13,6 @@ export const customAuthChecker: AuthChecker<MyContext> = async (
   if (roles.includes("MEMBER")) {
     if (root instanceof Event) {
       try {
-        console.log('root.invited', root.invited);
         if (!context.payload?.userId) {
           admit = false;
         } else {
@@ -26,7 +25,6 @@ export const customAuthChecker: AuthChecker<MyContext> = async (
       }
     } else if (root instanceof Group) {
       try {
-        console.log('root.userIds', root.userIds);
         if (!context.payload?.userId) {
           admit = false;
         } else {

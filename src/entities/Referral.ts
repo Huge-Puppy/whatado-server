@@ -6,8 +6,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   BaseEntity,
-  OneToOne,
-  JoinColumn,
+  ManyToOne,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 
@@ -43,10 +42,9 @@ export class Referral extends BaseEntity {
   signedUp: boolean;
 
   @Field(() => User)
-  @OneToOne(() => User, {
+  @ManyToOne(() => User, {
     cascade: true,
     onDelete: "CASCADE",
   })
-  @JoinColumn()
   user: User;
 }

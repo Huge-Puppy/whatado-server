@@ -43,12 +43,17 @@ export class GroupResolver {
           ],
         };
       }
+      if (options.requestedIds) {
+        // TODO: change this so people can't just add randos to their group
+        console.log('jcl', options.requestedIds);
+        group.requested = options.requestedIds.map((r) => {return {id: r} as any});
+        console.log('jcl', group.requested);
+      }
       if (options.userIds) {
-        const users = await User.findByIds(options.userIds);
+        const users = await User.findByIds([... new Set(options.userIds)]);
         group.users = users;
-
         const newUsers = users.filter((u) => group.requested.includes(u));
-        group.requested = group.requested.filter((u) => !users.includes(u));
+        group.requested = group.requested.filter((u) => !users.map((user) => user.id).includes(u.id));
         const message = {
           data: { type: "group", groupId: `${group.id}` },
           notification: {
@@ -76,7 +81,7 @@ export class GroupResolver {
         group.owner = options.owner;
       }
       if (options.groupIconId) {
-        group.icon = {id: options.groupIconId} as any;
+        group.icon = { id: options.groupIconId } as any;
       }
       if (options.location) {
         group.location = options.location;
@@ -101,7 +106,7 @@ export class GroupResolver {
       };
     }
   }
-  
+
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async requestGroup(
@@ -112,7 +117,7 @@ export class GroupResolver {
       const group = await Group.findOneOrFail(id, {
         relations: ["requested"],
       });
-      group.requested = [...group.requested, {id: +payload!.userId} as any];
+      group.requested = [...group.requested, { id: +payload!.userId } as any];
       await group.save();
       return { ok: true, nodes: true };
     } catch (e) {
@@ -153,6 +158,29 @@ export class GroupResolver {
           {
             field: "group",
             message: `error creating group: ${e.message}`,
+          },
+        ],
+      };
+    }
+  }
+
+
+  @Query(() => GroupsApiResponse)
+  @UseMiddleware(isAuth)
+  async suggestedGroups(): Promise<GroupsApiResponse> {
+    try {
+      const groups = await Group.find({
+        relations: ["icon"],
+        take: 50,
+      });
+      return { ok: true, nodes: groups };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "group",
+            message: `error finding groups: ${e.message}`,
           },
         ],
       };
@@ -209,6 +237,14 @@ export class GroupResolver {
   @FieldResolver()
   async users(@Root() group: Group, @Ctx() { userLoader }: MyContext) {
     return userLoader.loadMany(group.userIds);
+  }
+
+  @FieldResolver()
+  async requested(@Root() group: Group) {
+    return User.createQueryBuilder()
+      .relation(Group, "requested")
+      .of(group)
+      .loadMany();
   }
 
   @FieldResolver()

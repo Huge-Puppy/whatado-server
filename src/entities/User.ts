@@ -159,7 +159,6 @@ export class User extends BaseEntity {
     cascade: ["insert", "update"],
     onDelete: "CASCADE",
   })
-  @JoinTable()
   requestedGroups: Group[];
 
   @Field(() => [Int])

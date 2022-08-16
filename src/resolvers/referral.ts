@@ -44,8 +44,8 @@ export class ReferralResolver extends BaseEntity {
   async createReferral(
     @Ctx() { payload }: MyContext,
     @Arg("phone", () => String) phone: string,
-    @Arg("eventId", () => Int) eventId: number,
-    @Arg("eventId", () => Int) groupId: number
+    @Arg("eventId", () => Int, {nullable: true}) eventId: number,
+    @Arg("groupId", () => Int, {nullable: true}) groupId: number
   ): Promise<BoolApiResponse> {
     try {
       const user = await User.findOneOrFail(payload?.userId);

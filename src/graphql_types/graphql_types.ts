@@ -6,7 +6,6 @@ export const PointScalar = new GraphQLScalarType({
   description: "Geojson scalar point type",
   serialize(value: unknown): string {
     // check the type of received value
-    console.log("serialize");
     if (!(typeof value == "object")) {
       let formattedString = (value as string)
         .replace("(", "[")
@@ -18,7 +17,6 @@ export const PointScalar = new GraphQLScalarType({
   },
   parseValue(value: unknown): any {
     // check the type of received value
-    console.log("parsevalue");
     if (typeof value !== "string") {
       throw new Error("PointScalar can only parse string values");
     }
@@ -32,7 +30,6 @@ export const PointScalar = new GraphQLScalarType({
   },
   parseLiteral(ast): Point {
     // check the type of received value
-    console.log("parseliteral");
     if (ast.kind !== Kind.STRING) {
       throw new Error("PointScalar can only parse string values");
     }

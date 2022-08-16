@@ -133,12 +133,13 @@ export class Event extends BaseEntity {
   @Column({ type: "enum", enum: Privacy, default: Privacy.PUBLIC })
   privacy!: Privacy;
 
-  @Field(() => Group)
+  @Field(() => Group, {nullable: true})
   @ManyToOne(() => Group, (g) => g.events, {
+    nullable: true,
     cascade: true,
     onDelete: "SET NULL",
   })
-  group: Group;
+  group?: Group;
 
   @Field(() => Int)
   @Column({ default: 18 })
