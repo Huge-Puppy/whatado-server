@@ -779,11 +779,13 @@ export class EventResolver {
           ],
         };
       }
-      await Wannago.create({
+      const newWannago = await Wannago.create({
         declined: false,
         user: { id: userId },
         event: { id: eventId },
       }).save();
+      event.wannago = [newWannago, ...event.wannago];
+      await event.save();
       const message = {
         data: { type: "event", eventId: `${event.id}` },
         notification: {
@@ -856,11 +858,11 @@ export class EventResolver {
   }
 
   @FieldResolver()
-  async wannago(@Root() event: Event) {
-    return Wannago.createQueryBuilder()
-      .relation("user")
-      .of(event)
-      .loadMany();
+  async wannago(@Root() event: Event, 
+    @Ctx() { wannagoLoader }: MyContext
+  ) {
+    if (event.wannago == null) return [];
+    return wannagoLoader.loadMany(event.wannago.map((w) => w.id));
   }
 
   @FieldResolver()
