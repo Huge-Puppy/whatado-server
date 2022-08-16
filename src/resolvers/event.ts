@@ -304,12 +304,12 @@ export class EventResolver {
         .select()
         .addSelect((subQuery) => {
           return subQuery
-              .select('COUNT(u.id)', 'count')
-              .from(User, 'u')
-              .where('u.id = Event__invited.id');
-      }, 'count')
-      .orderBy('count', 'DESC')
-      .loadRelationCountAndMap('Event.invited', 'Event.invited')
+            .select("COUNT(u.id)", "count")
+            .from(User, "u")
+            .where("u.id = Event__invited.id");
+        }, "count")
+        .orderBy("count", "DESC")
+        .loadRelationCountAndMap("Event.invited", "Event.invited")
         .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
         .leftJoinAndSelect("Event.creator", "Event__creator")
         .leftJoinAndSelect("Event.wannago", "Event__wannago")
@@ -374,7 +374,7 @@ export class EventResolver {
         .take(10)
         .getMany();
 
-        console.log('jcl', events);
+      console.log("jcl", events);
       return { ok: true, nodes: events };
     } catch (e) {
       return {
@@ -721,8 +721,6 @@ export class EventResolver {
       const wannago = await Wannago.createQueryBuilder("Wannago")
         .leftJoinAndSelect("Wannago.user", "Wannago__user")
         .leftJoinAndSelect("Wannago.event", "Wannago__event")
-        .relation("user")
-        .relation("event")
         .select()
         .where("Wannago__user.id = :userId", { userId })
         .andWhere("Wannago__event.id = :eventId", {
@@ -781,11 +779,13 @@ export class EventResolver {
           ],
         };
       }
-      await Wannago.create({
+      const newWannago = await Wannago.create({
         declined: false,
         user: { id: userId },
         event: { id: eventId },
       }).save();
+      event.wannago = [newWannago, ...event.wannago];
+      await event.save();
       const message = {
         data: { type: "event", eventId: `${event.id}` },
         notification: {
@@ -858,11 +858,11 @@ export class EventResolver {
   }
 
   @FieldResolver()
-  async wannago(@Root() event: Event) {
-    return Wannago.createQueryBuilder()
-      .relation(Event, "wannago")
-      .of(event)
-      .loadMany();
+  async wannago(@Root() event: Event, 
+    @Ctx() { wannagoLoader }: MyContext
+  ) {
+    if (event.wannago == null) return [];
+    return wannagoLoader.loadMany(event.wannago.map((w) => w.id));
   }
 
   @FieldResolver()
