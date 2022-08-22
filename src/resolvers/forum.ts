@@ -15,6 +15,7 @@ import { ForumApiResponse, ForumsApiResponse } from "./outputs/modelOutputs";
 import { isAuth } from "../middleware/isAuth";
 import { MyContext } from "../types";
 import { ChatNotification } from "../entities/ChatNotification";
+import { ForumFilterInput } from "./inputs/forumInputs";
 
 @Resolver(() => Forum)
 export class ForumResolver extends BaseEntity {
@@ -77,6 +78,47 @@ export class ForumResolver extends BaseEntity {
 
   @Mutation(() => ForumApiResponse)
   @UseMiddleware(isAuth)
+  async updateForum(
+    @Arg("options") options: ForumFilterInput,
+    @Ctx() { payload }: MyContext
+  ): Promise<ForumApiResponse> {
+    try {
+      const forum = await Forum.findOneOrFail(options.id, {
+        relations: ["chats", "event", "userNotifications", "moderators"],
+      });
+      if (!forum.moderators.map((u) => u.id).includes(+payload!.userId)) {
+        return {
+          ok: false,
+          errors: [
+            { field: "forum", message: `Unauthorized to update forum` },
+          ],
+        };
+      }
+      if (options.chatDisabled != undefined && options.chatDisabled != null) {
+        forum.chatDisabled = options.chatDisabled;
+      }
+      if (options.moderatorsIds) {
+        forum.moderators = options.moderatorsIds.map((id) => {
+          return { id } as any;
+        });
+      }
+      await forum.save();
+      return {
+        nodes: forum,
+        ok: true,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          { field: "forum", message: `error creating forum: ${e.message}` },
+        ],
+      };
+    }
+  }
+
+  @Mutation(() => ForumApiResponse)
+  @UseMiddleware(isAuth)
   async createForum(
     @Arg("eventId", () => Int) eventId: number,
     @Ctx() { payload }: MyContext
@@ -120,6 +162,8 @@ export class ForumResolver extends BaseEntity {
   @FieldResolver()
   chats(@Root() forum: Forum, @Ctx() { chatLoader }: MyContext) {
     if (forum.chats == null) return [];
-    return chatLoader.loadMany(forum.chats.slice(forum.chats.length-1).map((chat) => chat.id));
+    return chatLoader.loadMany(
+      forum.chats.slice(forum.chats.length - 1).map((chat) => chat.id)
+    );
   }
 }

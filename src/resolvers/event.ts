@@ -726,11 +726,11 @@ export class EventResolver {
         .andWhere("Wannago__event.id = :eventId", {
           eventId,
         })
-        .getOneOrFail();
-
-      wannago.declined = true;
-      await wannago.save();
-
+        .getOne();
+      if (wannago) {
+        wannago.declined = true;
+        await wannago.save();
+      }
       const event = await Event.findOneOrFail(eventId, {
         relations: [
           "creator",
@@ -743,8 +743,6 @@ export class EventResolver {
       });
       const i = event.invited.findIndex((u) => u.id == userId);
       event.invited.splice(i, 1);
-      const wi = event.wannago.findIndex((w) => w.user.id == userId);
-      event.wannago[wi] = wannago;
       await event.save();
       return { ok: true, nodes: event };
     } catch (e) {
@@ -858,9 +856,7 @@ export class EventResolver {
   }
 
   @FieldResolver()
-  async wannago(@Root() event: Event, 
-    @Ctx() { wannagoLoader }: MyContext
-  ) {
+  async wannago(@Root() event: Event, @Ctx() { wannagoLoader }: MyContext) {
     if (event.wannago == null) return [];
     return wannagoLoader.loadMany(event.wannago.map((w) => w.id));
   }
