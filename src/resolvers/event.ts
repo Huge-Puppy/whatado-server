@@ -644,6 +644,7 @@ export class EventResolver {
     @Arg("eventId", () => Int) eventId: number
   ): Promise<BoolApiResponse> {
     try {
+      // TODO delete forum becuase it cascades that way.
       await Event.delete(eventId);
       return { ok: true, nodes: true };
     } catch (e) {

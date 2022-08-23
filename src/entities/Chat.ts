@@ -55,6 +55,5 @@ export class Chat extends BaseEntity {
     onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
-  @JoinColumn()
   survey: Survey;
 }

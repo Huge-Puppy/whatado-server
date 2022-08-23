@@ -114,7 +114,6 @@ export class Event extends BaseEntity {
     onDelete: "CASCADE",
     cascade: ["insert", "update"],
   })
-  @JoinColumn()
   forum: Forum;
 
   @Field()

@@ -9,6 +9,7 @@ import {
   Column,
   JoinTable,
   ManyToMany,
+  JoinColumn,
   // Column,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
@@ -51,6 +52,7 @@ export class Forum extends BaseEntity {
     onDelete: "CASCADE",
     cascade: true,
   })
+  @JoinColumn()
   event: Event;
 
   @Field()

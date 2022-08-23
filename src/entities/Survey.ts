@@ -7,6 +7,7 @@ import {
   BaseEntity,
   OneToOne,
   OneToMany,
+  JoinColumn,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { Chat } from "./Chat";
@@ -36,6 +37,7 @@ export class Survey extends BaseEntity {
     cascade: true,
     onDelete: "CASCADE",
   })
+  @JoinColumn()
   chat: Chat;
 
   @Field(() => [Answer])
