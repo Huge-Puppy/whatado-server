@@ -42,7 +42,9 @@ export class ChatResolver extends BaseEntity {
     const forum = await Forum.findOne(forumId, {
       relations: ["event", "event.invited"],
     });
-    if (forum && forum.event.invited.map((u) => u.id).includes(userId)) {
+    console.log(forum?.event.invited);
+    console.log(forum?.event.creatorId);
+    if (forum && (forum.event.creatorId == userId || forum.event.invited.map((u) => u.id).includes(userId))) {
       return true;
     }
     return false;
