@@ -1,5 +1,6 @@
 import {
   Arg,
+  Ctx,
   FieldResolver,
   Int,
   Mutation,
@@ -18,10 +19,20 @@ import {
   IntsApiResponse,
 } from "./outputs/modelOutputs";
 import { InterestFilterInput } from "./inputs/interestInputs";
-import { User } from "../entities/User";
+import { Admin } from "../entities/Admin";
+import { MyContext } from "src/types";
+import { Event } from "../entities/Event";
 
 @Resolver(() => Interest)
 export class InterestResolver extends BaseEntity {
+  async isUserAdmin(id: number): Promise<boolean> {
+    const admin = await Admin.find({ where: { user: { id } } });
+    if (admin) {
+      return true;
+    }
+    return false;
+  }
+
   @Query(() => InterestApiResponse)
   @UseMiddleware(isAuth)
   async interest(
@@ -135,9 +146,16 @@ export class InterestResolver extends BaseEntity {
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async deleteInterest(
-    @Arg("id", () => Int) id: number
+    @Arg("id", () => Int) id: number,
+    @Ctx() { payload }: MyContext
   ): Promise<BoolApiResponse> {
     try {
+      if (!(await this.isUserAdmin(+payload!.userId))) {
+        return {
+          ok: false,
+          errors: [{ field: "delete interest", message: "unauthorized" }],
+        };
+      }
       await Interest.delete({ id });
     } catch (e) {
       return { ok: false, errors: [{ message: e.message }] };
@@ -148,9 +166,16 @@ export class InterestResolver extends BaseEntity {
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async updateInterest(
-    @Arg("options") options: InterestFilterInput
+    @Arg("options") options: InterestFilterInput,
+    @Ctx() { payload }: MyContext
   ): Promise<BoolApiResponse> {
     try {
+      if (!(await this.isUserAdmin(+payload!.userId))) {
+        return {
+          ok: false,
+          errors: [{ field: "update interest", message: "unauthorized" }],
+        };
+      }
       const peopleInterested =
         options.peopleInterestedIds != null
           ? options.peopleInterestedIds.map((id) => ({
@@ -187,7 +212,7 @@ export class InterestResolver extends BaseEntity {
 
   @FieldResolver()
   async relatedEvents(@Root() interest: Interest) {
-    return await User.find({
+    return await Event.find({
       where: { relatedInterests: { id: interest.id } },
     });
   }

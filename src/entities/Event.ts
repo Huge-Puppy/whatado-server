@@ -8,13 +8,12 @@ import {
   ManyToMany,
   JoinTable,
   OneToOne,
-  JoinColumn,
   ManyToOne,
   RelationId,
   OneToMany,
   Index,
 } from "typeorm";
-import { Field, Float, Int, ObjectType } from "type-graphql";
+import { Authorized, Field, Float, Int, ObjectType } from "type-graphql";
 import { User } from "./User";
 import { Interest } from "./Interest";
 import { Gender, Privacy } from "../types";
@@ -43,12 +42,12 @@ export class Event extends BaseEntity {
   @Column({ type: "timestamptz" })
   time: Date;
 
+  @Authorized(["MEMBER", "ADMIN"])
   @Field()
   @Column({ default: "" })
   location!: string;
 
-  // TODO implement middleware for "MEMBERS" where you can't get event location unless you are invited.
-  // Create a corresponding data model on the client
+  @Authorized(["MEMBER", "ADMIN"])
   @Field(() => PointScalar)
   @Index({ spatial: true })
   @Column({

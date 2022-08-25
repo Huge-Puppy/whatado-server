@@ -49,7 +49,7 @@ export class User extends BaseEntity {
   @Column()
   name!: string;
 
-  @Authorized("OWNER")
+  @Authorized(["OWNER", "ADMIN"])
   @Field()
   @Column({ unique: true })
   phone!: string;
@@ -60,7 +60,7 @@ export class User extends BaseEntity {
   @Column({ default: "" })
   otp!: string;
 
-  @Authorized("OWNER")
+  @Authorized(["OWNER", "ADMIN"])
   @Field(() => Int)
   @Column({ default: 0 })
   refreshCount!: number;
@@ -73,7 +73,7 @@ export class User extends BaseEntity {
   @Column()
   birthday!: Date;
 
-  @Authorized("OWNER")
+  @Authorized(["OWNER", "ADMIN"])
   @Field()
   @Column({ default: "" })
   deviceId!: string;
@@ -82,7 +82,7 @@ export class User extends BaseEntity {
   @Column({ default: "[]" })
   photoUrls!: string;
 
-  @Authorized("OWNER")
+  @Authorized(["OWNER", "ADMIN"])
   @Field(() => Int)
   @Column({ default: 0 })
   flags!: number;
@@ -91,12 +91,12 @@ export class User extends BaseEntity {
   @Column({ default: "" })
   bio!: string;
 
-  @Authorized("OWNER")
+  @Authorized(["OWNER", "ADMIN"])
   @Field()
   @Column({ default: false })
   verified!: boolean;
 
-  @Authorized("OWNER")
+  @Authorized(["OWNER", "ADMIN"])
   @Field(() => [Interest])
   @ManyToMany(() => Interest, (interest) => interest.peopleInterested, {
     cascade: ["insert", "update"],
@@ -104,7 +104,7 @@ export class User extends BaseEntity {
   @JoinTable()
   interests: Interest[];
 
-  @Authorized("OWNER")
+  @Authorized(["OWNER", "ADMIN"])
   @Field(() => [User])
   @ManyToMany(() => User, {
     cascade: ["insert", "update"],
@@ -197,7 +197,7 @@ export class User extends BaseEntity {
   @RelationId((user: User) => user.invitedEvents)
   invitedEventsIds: number[];
 
-  @Authorized("OWNER")
+  @Authorized(["OWNER", "ADMIN"])
   @Field(() => [ChatNotification])
   @OneToMany(() => ChatNotification, (n) => n.user, {
     cascade: ["insert", "update"],

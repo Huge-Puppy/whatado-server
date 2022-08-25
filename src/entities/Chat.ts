@@ -7,7 +7,6 @@ import {
   BaseEntity,
   ManyToOne,
   OneToOne,
-  JoinColumn,
 } from "typeorm";
 import { Field, Int, ObjectType } from "type-graphql";
 import { User } from "./User";

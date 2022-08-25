@@ -24,13 +24,39 @@ import { MoreThan, Brackets, ILike } from "typeorm";
 import * as admin from "firebase-admin";
 import { Group } from "../entities/Group";
 import { Interest } from "../entities/Interest";
+import { Admin } from "../entities/Admin";
 
 @Resolver(() => Event)
 export class EventResolver {
+  // check if user is an admin
+  async isUserAdmin(id: number): Promise<boolean> {
+    const admin = await Admin.find({ where: { user: { id } } });
+    if (admin) {
+      return true;
+    }
+    return false;
+  }
+
+  async isOwner(userId: number, eventId: number): Promise<boolean> {
+    const event = await Event.findOne(eventId);
+    if (event && event.creatorId == userId) {
+      return true;
+    }
+    return false;
+  }
+
   @Query(() => EventsApiResponse)
   @UseMiddleware(isAuth)
-  async flaggedEvents(): Promise<EventsApiResponse> {
+  async flaggedEvents(
+    @Ctx() { payload }: MyContext
+  ): Promise<EventsApiResponse> {
     try {
+      if (!(await this.isUserAdmin(+payload!.userId))) {
+        return {
+          ok: false,
+          errors: [{ field: "server", message: "user is not admin" }],
+        };
+      }
       const events = await Event.find({
         where: {
           flags: MoreThan(0),
@@ -149,8 +175,6 @@ export class EventResolver {
         .skip(skip)
         .take(take)
         .getMany();
-
-      console.log(events.length);
       return { ok: true, nodes: events };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
@@ -373,8 +397,6 @@ export class EventResolver {
         )
         .take(10)
         .getMany();
-
-      console.log("jcl", events);
       return { ok: true, nodes: events };
     } catch (e) {
       return {
@@ -608,9 +630,35 @@ export class EventResolver {
   @Mutation(() => EventApiResponse)
   @UseMiddleware(isAuth)
   async updateEvent(
-    @Arg("options") options: EventFilterInput
+    @Arg("options") options: EventFilterInput,
+    @Ctx() { payload }: MyContext
   ): Promise<EventApiResponse> {
     try {
+      if (!options.id) {
+        return {
+          ok: false,
+          errors: [
+            {
+              field: "updating event",
+              message: "missing event data",
+            },
+          ],
+        };
+      }
+      if (
+        !(await this.isOwner(+payload!.userId, options.id)) &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [
+            {
+              field: "updating event",
+              message: "not authorized to update event",
+            },
+          ],
+        };
+      }
       const themap = new Object({
         ...options,
       });
@@ -641,10 +689,21 @@ export class EventResolver {
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async deleteEvent(
-    @Arg("eventId", () => Int) eventId: number
+    @Arg("eventId", () => Int) eventId: number,
+    @Ctx() { payload }: MyContext
   ): Promise<BoolApiResponse> {
     try {
-      // TODO delete forum becuase it cascades that way.
+      if (
+        !(await this.isOwner(+payload!.userId, eventId)) &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [
+            { field: "server", message: "not authorized to delete event" },
+          ],
+        };
+      }
       await Event.delete(eventId);
       return { ok: true, nodes: true };
     } catch (e) {
@@ -656,7 +715,8 @@ export class EventResolver {
   @UseMiddleware(isAuth)
   async addInvite(
     @Arg("eventId", () => Int) eventId: number,
-    @Arg("userId", () => Int) userId: number
+    @Arg("userId", () => Int) userId: number,
+    @Ctx() { payload }: MyContext
   ): Promise<EventApiResponse> {
     try {
       const user = await User.findOneOrFail(userId);
@@ -670,6 +730,15 @@ export class EventResolver {
           "forum",
         ],
       });
+      if (
+        !event.invited.some((u) => u.id == +payload!.userId) &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [{ field: "invite", message: "unauthorized" }],
+        };
+      }
       if (event.invited.some((u) => u.id == userId)) {
         return {
           ok: false,
@@ -716,9 +785,24 @@ export class EventResolver {
   @UseMiddleware(isAuth)
   async removeInvite(
     @Arg("eventId", () => Int) eventId: number,
-    @Arg("userId", () => Int) userId: number
+    @Arg("userId", () => Int) userId: number,
+    @Ctx() { payload }: MyContext
   ): Promise<EventApiResponse> {
     try {
+      if (
+        !(await this.isOwner(+payload!.userId, eventId)) &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [
+            {
+              message: "unauthorized",
+              field: "remove invite",
+            },
+          ],
+        };
+      }
       const wannago = await Wannago.createQueryBuilder("Wannago")
         .leftJoinAndSelect("Wannago.user", "Wannago__user")
         .leftJoinAndSelect("Wannago.event", "Wannago__event")
@@ -767,46 +851,89 @@ export class EventResolver {
           "invited",
         ],
       });
-      if (event.wannago.some((w, _, __) => w.user.id == userId)) {
-        return {
-          ok: false,
-          errors: [
-            {
-              field: "wannago",
-              message: "wannago already exists for the event",
-            },
-          ],
-        };
-      }
-      const newWannago = await Wannago.create({
-        declined: false,
-        user: { id: userId },
-        event: { id: eventId },
-      }).save();
-      event.wannago = [newWannago, ...event.wannago];
-      await event.save();
-      const message = {
-        data: { type: "event", eventId: `${event.id}` },
-        notification: {
-          title: "Event Activity",
-          body: `Someone wants to go to your event!`,
-        },
-      };
-      const options = {
-        contentAvailable: true,
-        priority: "high",
-      };
-      await admin
-        .messaging()
-        .sendToDevice(event.creator.deviceId, message, options)
-        .then((response) => {
-          console.log("Successfully sent message:", response);
-        })
-        .catch((error) => {
-          console.log("Error sending message:", error);
-        });
+      const user = await User.findOneOrFail(userId);
+      if (event.screened) {
+        if (event.wannago.some((w) => w.user.id == userId)) {
+          return {
+            ok: false,
+            errors: [
+              {
+                field: "wannago",
+                message: "wannago already exists for the event",
+              },
+            ],
+          };
+        }
+        const newWannago = await Wannago.create({
+          declined: false,
+          user,
+          event: { id: eventId } as any,
+        }).save();
+        event.wannago = [newWannago, ...event.wannago];
+        await event.save();
 
-      return { ok: true, nodes: event };
+        // notify group owner
+        const message = {
+          data: { type: "event", eventId: `${event.id}` },
+          notification: {
+            title: "Event Activity",
+            body: `Someone wants to go to your event!`,
+          },
+        };
+        const options = {
+          contentAvailable: true,
+          priority: "high",
+        };
+        await admin
+          .messaging()
+          .sendToDevice(event.creator.deviceId, message, options)
+          .then((response) => {
+            console.log("Successfully sent message:", response);
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+
+        return { ok: true, nodes: event };
+      } else {
+        if (event.invited.some((u) => u.id == userId)) {
+          return {
+            ok: false,
+            errors: [
+              {
+                field: "add invite",
+                message: "user already invited",
+              },
+            ],
+          };
+        }
+        event.invited = [...event.invited, { id: userId } as any];
+        await event.save();
+
+        // notify invitee
+        const message = {
+          data: { type: "event", eventId: `${event.id}` },
+          notification: {
+            title: "Event Activity",
+            body: `Someone joined your event!`,
+          },
+        };
+        const options = {
+          contentAvailable: true,
+          priority: "high",
+        };
+        await admin
+          .messaging()
+          .sendToDevice(event.creator.deviceId, message, options)
+          .then((response) => {
+            console.log("Successfully sent message:", response);
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+
+        return { ok: true, nodes: event };
+      }
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
     }
@@ -815,10 +942,23 @@ export class EventResolver {
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async deleteWannago(
-    @Arg("id", () => Int) id: number
+    @Arg("id", () => Int) id: number,
+    @Ctx() { payload }: MyContext
   ): Promise<BoolApiResponse> {
     try {
-      await Wannago.delete(id);
+      const wannago = await Wannago.findOneOrFail(id);
+      if (
+        !(await this.isOwner(+payload!.userId, wannago.event.id)) &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [
+            { field: "server", message: "unauthorized to update wannago" },
+          ],
+        };
+      }
+      if (!(await this.isUserAdmin(+payload!.userId))) await Wannago.delete(id);
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
     }
@@ -829,10 +969,22 @@ export class EventResolver {
   @UseMiddleware(isAuth)
   async updateWannago(
     @Arg("id", () => Int) id: number,
-    @Arg("declined") declined: boolean
+    @Arg("declined") declined: boolean,
+    @Ctx() { payload }: MyContext
   ): Promise<BoolApiResponse> {
     try {
       const wannago = await Wannago.findOneOrFail(id);
+      if (
+        !(await this.isOwner(+payload!.userId, wannago.event.id)) &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [
+            { field: "server", message: "unauthorized to update wannago" },
+          ],
+        };
+      }
       wannago.declined = declined;
       await wannago.save();
       return { ok: true, nodes: true };

@@ -4,7 +4,6 @@ import { __prod__ } from "./constants";
 import express from "express";
 import { ApolloServer } from "apollo-server-express";
 import { buildSchema } from "type-graphql";
-import { HelloResolver } from "./resolvers/hello";
 import { EventResolver } from "./resolvers/event";
 import { UserResolver } from "./resolvers/user";
 import { MyContext } from "./types";
@@ -175,7 +174,6 @@ const main = async () => {
   const schema = await buildSchema({
     emitSchemaFile: `${__dirname}/schema.graphql`,
     resolvers: [
-      HelloResolver,
       EventResolver,
       UserResolver,
       InterestResolver,

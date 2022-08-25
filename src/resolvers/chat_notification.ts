@@ -14,14 +14,36 @@ import { ChatNotificationsApiResponse } from "./outputs/modelOutputs";
 import { isAuth } from "../middleware/isAuth";
 import { ChatNotification } from "../entities/ChatNotification";
 import { BoolApiResponse } from "./outputs/general";
+import { Admin } from "../entities/Admin";
 
 @Resolver(() => ChatNotification)
 export class ChatNotificationResolver {
+  async isUserAdmin(id: number): Promise<boolean> {
+    const admin = await Admin.find({ where: { user: { id } } });
+    if (admin) {
+      return true;
+    }
+    return false;
+  }
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async access(@Arg("id", () => Int) id: number): Promise<BoolApiResponse> {
+  async access(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { payload }: MyContext
+  ): Promise<BoolApiResponse> {
     try {
-      const cn = await ChatNotification.findOneOrFail(id);
+      const cn = await ChatNotification.findOneOrFail(id, {
+        relations: ["user"],
+      });
+      if (
+        cn.user.id != +payload!.userId &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [{ field: "chat notification", message: "unauthorized" }],
+        };
+      }
       cn.lastAccessed = new Date();
       cn.save();
       return { ok: true, nodes: true };
@@ -40,9 +62,23 @@ export class ChatNotificationResolver {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async mute(@Arg("id", () => Int) id: number): Promise<BoolApiResponse> {
+  async mute(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { payload }: MyContext
+  ): Promise<BoolApiResponse> {
     try {
-      const cn = await ChatNotification.findOneOrFail(id);
+      const cn = await ChatNotification.findOneOrFail(id, {
+        relations: ["user"],
+      });
+      if (
+        cn.user.id != +payload!.userId &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [{ field: "chat notification", message: "unauthorized" }],
+        };
+      }
       cn.muted = true;
       cn.save();
       return { ok: true, nodes: true };
@@ -63,9 +99,21 @@ export class ChatNotificationResolver {
   @UseMiddleware(isAuth)
   async unmute(
     @Arg("id", () => Int) id: number,
+    @Ctx() { payload }: MyContext
   ): Promise<BoolApiResponse> {
     try {
-      const cn = await ChatNotification.findOneOrFail(id);
+      const cn = await ChatNotification.findOneOrFail(id, {
+        relations: ["user"],
+      });
+      if (
+        cn.user.id != +payload!.userId &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [{ field: "chat notification", message: "unauthorized" }],
+        };
+      }
       cn.muted = false;
       cn.save();
       return { ok: true, nodes: true };

@@ -19,9 +19,17 @@ import { ILike } from "typeorm";
 import { GroupIcon } from "../entities/GroupIcon";
 import * as admin from "firebase-admin";
 import { BoolApiResponse } from "./outputs/general";
+import { Admin } from "../entities/Admin";
 
 @Resolver(() => Group)
 export class GroupResolver {
+  async isUserAdmin(id: number): Promise<boolean> {
+    const admin = await Admin.find({ where: { user: { id } } });
+    if (admin) {
+      return true;
+    }
+    return false;
+  }
   @Mutation(() => GroupApiResponse)
   @UseMiddleware(isAuth)
   async updateGroup(
@@ -38,22 +46,63 @@ export class GroupResolver {
           errors: [
             {
               field: "updating group",
-              message: `no access to group`,
+              message: "no access to group",
             },
           ],
         };
       }
       if (options.requestedIds) {
-        // TODO: change this so people can't just add randos to their group
-        console.log('jcl', options.requestedIds);
-        group.requested = options.requestedIds.map((r) => {return {id: r} as any});
-        console.log('jcl', group.requested);
+        if (
+          options.requestedIds.some(
+            (id) => !group.requested.map((u) => u.id).includes(id)
+          )
+        ) {
+          return {
+            ok: false,
+            errors: [
+              {
+                field: "update group",
+                message: "unable to add requests for other users",
+              },
+            ],
+          };
+        }
+        group.requested = options.requestedIds.map((r) => {
+          return { id: r } as any;
+        });
       }
       if (options.userIds) {
-        const users = await User.findByIds([... new Set(options.userIds)]);
+        const users = await User.findByIds([...new Set(options.userIds)]);
+        const acceptedUsers = users.filter((u) => group.requested.includes(u));
+        const otherUsers = users.filter((u) => !group.requested.includes(u));
+
+        // make sure that  everyone you add is one of your friends or in the requestedIds
+        const me = await User.findOneOrFail(payload!.userId, {
+          relations: ["friends", "inverseFriends"],
+        });
+        if (
+          otherUsers.some(
+            (u) => !me.friends.includes(u) && !me.inverseFriends.includes(u)
+          )
+        ) {
+          return {
+            ok: false,
+            errors: [
+              {
+                field: "update group",
+                message:
+                  "unauthorized to add group members who aren't friends and haven't requested",
+              },
+            ],
+          };
+        }
+
+        // add to group remove from requested
+        group.requested = group.requested.filter(
+          (u) => !users.map((user) => user.id).includes(u.id)
+        );
         group.users = users;
-        const newUsers = users.filter((u) => group.requested.includes(u));
-        group.requested = group.requested.filter((u) => !users.map((user) => user.id).includes(u.id));
+
         const message = {
           data: { type: "group", groupId: `${group.id}` },
           notification: {
@@ -65,7 +114,7 @@ export class GroupResolver {
           contentAvailable: true,
           priority: "high",
         };
-        for (var user of newUsers) {
+        for (var user of acceptedUsers) {
           await admin
             .messaging()
             .sendToDevice(user.deviceId, message, option)
@@ -77,7 +126,11 @@ export class GroupResolver {
             });
         }
       }
-      if (options.owner && +payload!.userId == options.owner) {
+      if (
+        options.owner &&
+        (+payload!.userId == options.owner ||
+          (await this.isUserAdmin(+payload!.userId)))
+      ) {
         group.owner = options.owner;
       }
       if (options.groupIconId) {
@@ -115,10 +168,38 @@ export class GroupResolver {
   ): Promise<BoolApiResponse> {
     try {
       const group = await Group.findOneOrFail(id, {
-        relations: ["requested"],
+        relations: ["requested", "owner"],
       });
       group.requested = [...group.requested, { id: +payload!.userId } as any];
       await group.save();
+
+      // send notification to group owner
+      const owner = await User.findOne(group.owner);
+      const me = await User.findOne(payload!.userId);
+      if (!owner || !me) {
+        return { ok: true, nodes: true };
+      }
+      const message = {
+        data: { type: "group", groupId: `${group.id}` },
+        notification: {
+          title: "Group Request",
+          body: `${me.name} wants to join your ${group.name} group!`,
+        },
+      };
+      const option = {
+        contentAvailable: true,
+        priority: "high",
+      };
+      await admin
+        .messaging()
+        .sendToDevice(owner.deviceId, message, option)
+        .then((response) => {
+          console.log("Successfully sent message:", response);
+        })
+        .catch((error) => {
+          console.log("Error sending message:", error);
+        });
+
       return { ok: true, nodes: true };
     } catch (e) {
       return {
@@ -163,7 +244,6 @@ export class GroupResolver {
       };
     }
   }
-
 
   @Query(() => GroupsApiResponse)
   @UseMiddleware(isAuth)

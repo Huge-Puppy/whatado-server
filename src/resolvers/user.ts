@@ -45,12 +45,14 @@ export class UserResolver {
       user.inverseFriends = await User.findByIds(user.inverseFriendsIds);
       user.requestedFriends = await User.findByIds(user.requestedFriendsIds);
       user.friendRequests = await User.findByIds(user.friendRequestsIds);
-      user.groups = await Group.findByIds(user.groupsIds, {relations: ["icon", "requested"]});
+      user.groups = await Group.findByIds(user.groupsIds, {
+        relations: ["icon", "requested"],
+      });
       user.requestedGroups = await Group.createQueryBuilder("Group")
         .leftJoinAndSelect("Group.requested", "Group__requested")
         .relation("requested")
         .select()
-        .where("Group__requested.id = :userId", {userId: user.id})
+        .where("Group__requested.id = :userId", { userId: user.id })
         .getMany();
       return {
         nodes: user,
@@ -211,7 +213,6 @@ export class UserResolver {
       };
     }
   }
-
 
   @Query(() => UsersApiResponse)
   @UseMiddleware(isAuth)
@@ -581,6 +582,7 @@ export class UserResolver {
     }
   }
 
+  // TODO allow admin to update and delete users
   @Mutation(() => UserApiResponse)
   @UseMiddleware(isAuth)
   async updateUser(
@@ -776,9 +778,19 @@ export class UserResolver {
         relations: ["friendRequests", "friends"],
       });
       const other = await User.findOneOrFail(id);
-      me.friendRequests = me.friendRequests.filter(
-        (user, _, __) => user.id != id
-      );
+      if (!me.friendRequests.some((u) => u.id == other.id)) {
+        return {
+          ok: false,
+          errors: [
+            {
+              field: "accept friend",
+              message:
+                "user must request to be friends before accepting as friend",
+            },
+          ],
+        };
+      }
+      me.friendRequests = me.friendRequests.filter((user) => user.id != id);
       me.friends = [...me.friends, other];
       await me.save();
 

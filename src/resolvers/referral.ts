@@ -44,11 +44,20 @@ export class ReferralResolver extends BaseEntity {
   async createReferral(
     @Ctx() { payload }: MyContext,
     @Arg("phone", () => String) phone: string,
-    @Arg("eventId", () => Int, {nullable: true}) eventId: number,
-    @Arg("groupId", () => Int, {nullable: true}) groupId: number
+    @Arg("eventId", () => Int, { nullable: true }) eventId: number,
+    @Arg("groupId", () => Int, { nullable: true }) groupId: number
   ): Promise<BoolApiResponse> {
     try {
       const user = await User.findOneOrFail(payload?.userId);
+      const referral = await Referral.find({
+        where: { phone, user: { id: payload?.userId } },
+      });
+      if (referral) {
+        return {
+          ok: false,
+          errors: [{ field: "create referral", message: "duplicate referral" }],
+        };
+      }
       await Referral.create({
         user,
         phone,

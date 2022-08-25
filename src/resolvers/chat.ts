@@ -26,13 +26,41 @@ import * as admin from "firebase-admin";
 import { SurveyInput } from "./inputs/surveyInput";
 import { Survey } from "../entities/Survey";
 import { Answer } from "../entities/Answer";
+import { Admin } from "../entities/Admin";
 
 @Resolver(() => Chat)
 export class ChatResolver extends BaseEntity {
+  async isUserAdmin(id: number): Promise<boolean> {
+    const admin = await Admin.find({ where: { user: { id } } });
+    if (admin) {
+      return true;
+    }
+    return false;
+  }
+
+  async isMember(userId: number, forumId: number): Promise<boolean> {
+    const forum = await Forum.findOne(forumId, {
+      relations: ["event", "event.invited"],
+    });
+    if (forum && forum.event.invited.map((u) => u.id).includes(userId)) {
+      return true;
+    }
+    return false;
+  }
+
   @Query(() => ChatApiResponse)
   @UseMiddleware(isAuth)
-  async chat(@Arg("id", () => Int) id: number): Promise<ChatApiResponse> {
+  async chat(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { payload }: MyContext
+  ): Promise<ChatApiResponse> {
     try {
+      if (!(await this.isUserAdmin(+payload!.userId))) {
+        return {
+          ok: false,
+          errors: [{ field: "chat", message: "unauthorized" }],
+        };
+      }
       const chat = await Chat.findOneOrFail({ where: { id } });
       return { nodes: chat };
     } catch (e) {
@@ -48,9 +76,19 @@ export class ChatResolver extends BaseEntity {
   @Query(() => ChatApiResponse)
   @UseMiddleware(isAuth)
   async lastChat(
-    @Arg("forumId", () => Int) forumId: number
+    @Arg("forumId", () => Int) forumId: number,
+    @Ctx() { payload }: MyContext
   ): Promise<ChatApiResponse> {
     try {
+      if (
+        !(await this.isMember(+payload!.userId, forumId)) &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [{ field: "chats", message: "unauthorized" }],
+        };
+      }
       const chat = await Chat.createQueryBuilder("Chat")
         .leftJoinAndSelect("Chat.author", "Chat__author")
         .leftJoinAndSelect("Chat.forum", "Chat__forum")
@@ -74,8 +112,14 @@ export class ChatResolver extends BaseEntity {
 
   @Query(() => ChatsApiResponse)
   @UseMiddleware(isAuth)
-  async flaggedChats(): Promise<ChatsApiResponse> {
+  async flaggedChats(@Ctx() { payload }: MyContext): Promise<ChatsApiResponse> {
     try {
+      if (!(await this.isUserAdmin(+payload!.userId))) {
+        return {
+          ok: false,
+          errors: [{ field: "chat", message: "unauthorized" }],
+        };
+      }
       const chats = await Chat.createQueryBuilder("Chat")
         .leftJoinAndSelect("Chat.author", "Chat__author")
         .leftJoinAndSelect("Chat.forum", "Chat__forum")
@@ -101,9 +145,19 @@ export class ChatResolver extends BaseEntity {
   async chats(
     @Arg("forumId", () => Int) forumId: number,
     @Arg("take", () => Int, { nullable: true }) take: number | undefined,
-    @Arg("skip", () => Int, { nullable: true }) skip: number | undefined
+    @Arg("skip", () => Int, { nullable: true }) skip: number | undefined,
+    @Ctx() { payload }: MyContext
   ): Promise<ChatsApiResponse> {
     try {
+      if (
+        !(await this.isMember(+payload!.userId, forumId)) &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [{ field: "chats", message: "unauthorized" }],
+        };
+      }
       const chats = await Chat.createQueryBuilder("Chat")
         .leftJoinAndSelect("Chat.author", "Chat__author")
         .leftJoinAndSelect("Chat.forum", "Chat__forum")
@@ -141,12 +195,14 @@ export class ChatResolver extends BaseEntity {
       return `${args.forumId}`;
     },
   })
-  @UseMiddleware(hasLoader)
+  @UseMiddleware([hasLoader])
   async chatSubscription(
     @Arg("forumId", () => Int) _forumId: number,
     @Root() chat: Chat
   ): Promise<Chat> {
+    console.log('i am here');
     chat.createdAt = new Date(chat.createdAt);
+    console.log(chat);
     if (chat.survey) {
       chat.survey.answers.forEach((__, i, as) => {
         as[i].votes.forEach((_, j, us) => {
@@ -162,9 +218,19 @@ export class ChatResolver extends BaseEntity {
   async createChat(
     @Arg("options") chatOptions: ChatInput,
     @Arg("surveyOptions", { nullable: true }) surveyOptions: SurveyInput,
+    @Ctx() { payload }: MyContext,
     @PubSub() pubSub: PubSubEngine
   ): Promise<ChatApiResponse> {
     try {
+      if (
+        !(await this.isMember(+payload!.userId, chatOptions.forumId)) &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [{ field: "chats", message: "unauthorized" }],
+        };
+      }
       const forum = await Forum.findOneOrFail(
         { id: chatOptions.forumId },
         { relations: ["userNotifications", "userNotifications.user"] }
@@ -188,6 +254,7 @@ export class ChatResolver extends BaseEntity {
         forum,
         survey,
       }).save();
+      console.log(pubSub);
 
       await pubSub.publish(`${chatOptions.forumId}`, chat);
       const message = {
@@ -240,8 +307,21 @@ export class ChatResolver extends BaseEntity {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async deleteChat(@Arg("id", () => Int) id: number): Promise<BoolApiResponse> {
+  async deleteChat(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { payload }: MyContext
+  ): Promise<BoolApiResponse> {
     try {
+      const chat = await Chat.findOneOrFail(id, { relations: ["author"] });
+      if (
+        !(chat.author.id == +payload!.userId) &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [{ field: "chats", message: "unauthorized" }],
+        };
+      }
       await Chat.delete({ id });
     } catch (e) {
       return { ok: false, errors: [{ message: e.message }] };
@@ -252,10 +332,24 @@ export class ChatResolver extends BaseEntity {
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async updateChat(
-    @Arg("options") options: ChatFilterInput
+    @Arg("options") options: ChatFilterInput,
+    @Ctx() { payload }: MyContext
   ): Promise<BoolApiResponse> {
     try {
-      await Chat.update({ id: options.id }, { text: options.text });
+      const chat = await Chat.findOneOrFail(options.id, {
+        relations: ["author"],
+      });
+      if (
+        chat.author.id != +payload!.userId &&
+        !(await this.isUserAdmin(+payload!.userId))
+      ) {
+        return {
+          ok: false,
+          errors: [{ field: "chat", message: "unauthorized" }],
+        };
+      }
+      chat.text = options.text ?? chat.text;
+      chat.save();
       return { nodes: true };
     } catch (e) {
       return {
@@ -277,6 +371,12 @@ export class ChatResolver extends BaseEntity {
     @PubSub() pubSub: PubSubEngine
   ): Promise<BoolApiResponse> {
     try {
+      if (!(await this.isMember(+payload!.userId, forumId))) {
+        return {
+          ok: false,
+          errors: [{ field: "chats", message: "unauthorized" }],
+        };
+      }
       const chat = await Chat.findOneOrFail(chatId, {
         relations: [
           "author",
