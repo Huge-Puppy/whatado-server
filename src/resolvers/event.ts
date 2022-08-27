@@ -101,7 +101,11 @@ export class EventResolver {
           age--;
         }
       }
+      if (age == 0) {
+        age = 25;
+      }
       const intIds = me.interests.map((i) => i.id);
+      intIds.push(-1);
       // get events filtered
       const events = await Event.createQueryBuilder("Event")
         .leftJoinAndSelect("Event.relatedInterests", "Event__relatedInterests")
@@ -204,7 +208,11 @@ export class EventResolver {
           age--;
         }
       }
+      if (age == 0) {
+        age = 25;
+      }
       const intIds = me.interests.map((i) => i.id);
+      intIds.push(-1);
       // get events filtered
       const qb = Event.createQueryBuilder("Event");
       const events = await qb
@@ -322,7 +330,11 @@ export class EventResolver {
           age--;
         }
       }
+      if (age == 0) {
+        age = 25;
+      }
       const intIds = me.interests.map((i) => i.id);
+      intIds.push(-1);
       // get events filtered
       const events = await Event.createQueryBuilder("Event")
         .select()
