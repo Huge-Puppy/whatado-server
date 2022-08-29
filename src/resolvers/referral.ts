@@ -52,7 +52,7 @@ export class ReferralResolver extends BaseEntity {
       const referral = await Referral.find({
         where: { phone, user: { id: payload?.userId } },
       });
-      if (referral) {
+      if (referral.length > 0) {
         return {
           ok: false,
           errors: [{ field: "create referral", message: "duplicate referral" }],
