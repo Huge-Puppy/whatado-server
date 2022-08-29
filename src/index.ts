@@ -37,10 +37,10 @@ import { GroupIconResolver } from "./resolvers/groupIcon";
 import { createGroupIconLoader } from "./resolvers/loaders/groupIconLoader";
 var serviceAccount = require("../firebase-adminsdk.json");
 
-// import WebSocket from "ws";
-// import { Chat } from "./entities/Chat";
-// import { Event } from "./entities/Event";
-// import { Forum } from "./entities/Forum";
+
+if (__prod__) {
+  console.log = function () { };
+}
 
 const main = async () => {
   await createConnection();
@@ -51,15 +51,6 @@ const main = async () => {
     credential: admin.credential.cert(serviceAccount),
     databaseURL: "https://whatado-default-rtdb.firebaseio.com",
   });
-
-  // const chats = await Chat.find();
-  // Chat.remove(chats);
-  // const events = await Event.find();
-  // Event.remove(events);
-  // const forums = await Forum.find();
-  // Forum.remove(forums);
-  // const users = await User.find();
-  // User.remove(users);
 
   app.get("/get_schema", async (_, res) => {
     return res.download(`${__dirname}/schema.graphql`, "schema.graphql");
@@ -192,6 +183,7 @@ const main = async () => {
     ],
     validate: false,
     pubSub,
+    authMode: "null",
     authChecker: customAuthChecker,
   });
   const apolloServer = new ApolloServer({

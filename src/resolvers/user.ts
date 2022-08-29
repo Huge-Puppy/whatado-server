@@ -26,7 +26,11 @@ import { ILike, In, MoreThan, Not } from "typeorm";
 import * as admin from "firebase-admin";
 import { Group } from "../entities/Group";
 import { Referral } from "../entities/Referral";
+import { __prod__ } from "../constants";
 
+if (__prod__) {
+  console.log = function () {};
+}
 @Resolver(() => User)
 export class UserResolver {
   @Query(() => UserApiResponse)

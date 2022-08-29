@@ -20,7 +20,11 @@ import { GroupIcon } from "../entities/GroupIcon";
 import * as admin from "firebase-admin";
 import { BoolApiResponse } from "./outputs/general";
 import { Admin } from "../entities/Admin";
+import { __prod__ } from "../constants";
 
+if (__prod__) {
+  console.log = function () {};
+}
 @Resolver(() => Group)
 export class GroupResolver {
   async isUserAdmin(id: number): Promise<boolean> {
