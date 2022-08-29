@@ -25,7 +25,11 @@ import * as admin from "firebase-admin";
 import { Group } from "../entities/Group";
 import { Interest } from "../entities/Interest";
 import { Admin } from "../entities/Admin";
+import { __prod__ } from "../constants";
 
+if (__prod__) {
+  console.log = function () {};
+}
 @Resolver(() => Event)
 export class EventResolver {
   // check if user is an admin

@@ -27,7 +27,10 @@ import { SurveyInput } from "./inputs/surveyInput";
 import { Survey } from "../entities/Survey";
 import { Answer } from "../entities/Answer";
 import { Admin } from "../entities/Admin";
-
+import { __prod__ } from "../constants";
+if (__prod__) {
+  console.log = function () {};
+}
 @Resolver(() => Chat)
 export class ChatResolver extends BaseEntity {
   async isUserAdmin(id: number): Promise<boolean> {
@@ -42,9 +45,11 @@ export class ChatResolver extends BaseEntity {
     const forum = await Forum.findOne(forumId, {
       relations: ["event", "event.invited"],
     });
-    console.log(forum?.event.invited);
-    console.log(forum?.event.creatorId);
-    if (forum && (forum.event.creatorId == userId || forum.event.invited.map((u) => u.id).includes(userId))) {
+    if (
+      forum &&
+      (forum.event.creatorId == userId ||
+        forum.event.invited.map((u) => u.id).includes(userId))
+    ) {
       return true;
     }
     return false;
@@ -202,9 +207,7 @@ export class ChatResolver extends BaseEntity {
     @Arg("forumId", () => Int) _forumId: number,
     @Root() chat: Chat
   ): Promise<Chat> {
-    console.log('i am here');
     chat.createdAt = new Date(chat.createdAt);
-    console.log(chat);
     if (chat.survey) {
       chat.survey.answers.forEach((__, i, as) => {
         as[i].votes.forEach((_, j, us) => {
@@ -256,7 +259,6 @@ export class ChatResolver extends BaseEntity {
         forum,
         survey,
       }).save();
-      console.log(pubSub);
 
       await pubSub.publish(`${chatOptions.forumId}`, chat);
       const message = {
