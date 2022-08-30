@@ -865,6 +865,7 @@ export class EventResolver {
           "wannago",
           "wannago.user",
           "invited",
+          "forum"
         ],
       });
       const user = await User.findOneOrFail(userId);
@@ -925,6 +926,13 @@ export class EventResolver {
         }
         event.invited = [...event.invited, { id: userId } as any];
         await event.save();
+
+        // create chat notification for new user
+        await ChatNotification.create({
+          user: { id: userId as any },
+          lastAccessed: new Date(),
+          forum: event.forum,
+        }).save();
 
         // notify invitee
         const message = {
