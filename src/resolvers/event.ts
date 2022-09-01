@@ -93,7 +93,7 @@ export class EventResolver {
   ): Promise<EventsApiResponse> {
     try {
       const me = await User.findOneOrFail(payload!.userId, {
-        relations: ["interests", "friends", "inverseFriends"],
+        relations: ["interests", "friends", "inverseFriends", "blockedUsers"],
       });
       //calculate birthday
       const now = new Date();
@@ -108,6 +108,8 @@ export class EventResolver {
       if (age == 0) {
         age = 25;
       }
+      const blockedUserIds = me.blockedUsers.map((u) => u.id);
+      blockedUserIds.push(-1);
       const intIds = me.interests.map((i) => i.id);
       intIds.push(-1);
       // get events filtered
@@ -168,6 +170,9 @@ export class EventResolver {
             });
           })
         )
+        .andWhere("Event__creator.id NOT IN (:...blockedUserIds)", {
+          blockedUserIds,
+        })
         .andWhere(
           new Brackets((qb) => {
             qb.where("Event_Event__relatedInterests.eventId IS NULL").orWhere(
@@ -200,7 +205,7 @@ export class EventResolver {
   ): Promise<EventsApiResponse> {
     try {
       const me = await User.findOneOrFail(payload!.userId, {
-        relations: ["interests", "friends", "inverseFriends"],
+        relations: ["interests", "friends", "inverseFriends", "blockedUsers"],
       });
       //calculate birthday
       const now = new Date();
@@ -215,6 +220,8 @@ export class EventResolver {
       if (age == 0) {
         age = 25;
       }
+      const blockedUserIds = me.blockedUsers.map((i) => i.id);
+      blockedUserIds.push(-1);
       const intIds = me.interests.map((i) => i.id);
       intIds.push(-1);
       // get events filtered
@@ -232,6 +239,9 @@ export class EventResolver {
         })
         .andWhere("Event.filterMinAge <= :userAge1", { userAge1: age })
         .andWhere("Event.filterMaxAge >= :userAge2", { userAge2: age })
+        .andWhere("Event__creator.id NOT IN (:...blockedUserIds)", {
+          blockedUserIds,
+        })
         .andWhere(
           new Brackets((qb2) => {
             qb2
@@ -322,7 +332,7 @@ export class EventResolver {
   ): Promise<EventsApiResponse> {
     try {
       const me = await User.findOneOrFail(payload!.userId, {
-        relations: ["interests", "friends", "inverseFriends"],
+        relations: ["interests", "friends", "inverseFriends", "blockedUsers"],
       });
       //calculate birthday
       const now = new Date();
@@ -337,6 +347,8 @@ export class EventResolver {
       if (age == 0) {
         age = 25;
       }
+      const blockedUserIds = me.blockedUsers.map((i) => i.id);
+      blockedUserIds.push(-1);
       const intIds = me.interests.map((i) => i.id);
       intIds.push(-1);
       // get events filtered
@@ -357,6 +369,9 @@ export class EventResolver {
         .leftJoinAndSelect("Event__wannago.user", "Event__wannago__user")
         .where("Event.time > :time1", {
           time1: now,
+        })
+        .andWhere("Event__creator.id NOT IN (:...blockedUserIds)", {
+          blockedUserIds,
         })
         .andWhere(
           "ST_DWithin(Event.coordinates ::Geometry, :userLoc ::Geometry, 10)",
@@ -865,7 +880,7 @@ export class EventResolver {
           "wannago",
           "wannago.user",
           "invited",
-          "forum"
+          "forum",
         ],
       });
       const user = await User.findOneOrFail(userId);
