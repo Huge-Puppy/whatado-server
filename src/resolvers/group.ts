@@ -86,7 +86,7 @@ export class GroupResolver {
         });
         if (
           otherUsers.some(
-            (u) => !me.friends.includes(u) && !me.inverseFriends.includes(u)
+            (u) => !(me.id == u.id) && !me.friends.map((_u) => _u.id).includes(u.id) && !me.inverseFriends.map((_u) => _u.id).includes(u.id)
           )
         ) {
           return {
