@@ -76,6 +76,10 @@ export class UserResolver {
     @Arg("numbers", () => [String]) numbers: string[]
   ): Promise<StringsApiResponse> {
     try {
+      if (numbers.length == 0) return {
+        nodes: [],
+        ok: true,
+      };
       const users = await User.find({ where: { phone: In(numbers) } });
       const usernumbers = users.map((u) => u.phone);
       const returnval = numbers.filter((n) => !usernumbers.includes(n));

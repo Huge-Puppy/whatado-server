@@ -76,6 +76,7 @@ export class GroupResolver {
         });
       }
       if (options.userIds) {
+        // TODO: prevent people from removing others from the group unless admin
         const users = await User.findByIds([...new Set(options.userIds)]);
         const acceptedUsers = users.filter((u) => group.requested.includes(u));
         const otherUsers = users.filter((u) => !group.requested.includes(u));
@@ -203,6 +204,33 @@ export class GroupResolver {
         .catch((error) => {
           console.log("Error sending message:", error);
         });
+
+      return { ok: true, nodes: true };
+    } catch (e) {
+      return {
+        ok: false,
+        errors: [
+          {
+            field: "requesting group",
+            message: `error requesting group: ${e.message}`,
+          },
+        ],
+      };
+    }
+  }
+  
+  @Mutation(() => BoolApiResponse)
+  @UseMiddleware(isAuth)
+  async leaveGroup(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { payload }: MyContext
+  ): Promise<BoolApiResponse> {
+    try {
+      const group = await Group.findOneOrFail(id, {
+        relations: ["users"]
+      });
+      group.users = group.users.filter((u, _, __) => u.id != +(payload!.userId));
+      await group.save();
 
       return { ok: true, nodes: true };
     } catch (e) {

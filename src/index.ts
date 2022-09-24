@@ -37,9 +37,8 @@ import { GroupIconResolver } from "./resolvers/groupIcon";
 import { createGroupIconLoader } from "./resolvers/loaders/groupIconLoader";
 var serviceAccount = require("../firebase-adminsdk.json");
 
-
 if (__prod__) {
-  console.log = function () { };
+  console.log = function () {};
 }
 
 const main = async () => {
@@ -73,8 +72,8 @@ const main = async () => {
     }
     const partial = req.query.partial;
     const location = req.query.location;
-    const fields = "name,geometry";
-    let url: string = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${partial}&location=${location}&fields=${fields}&key=${process.env.PLACES_KEY}`;
+    let url: string = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${partial}&location=${location}&key=${process.env.PLACES_KEY}`;
+    console.log(url);
     let response = await axios.get(url);
     let data = response.data;
     return res.send({ data });
@@ -97,7 +96,7 @@ const main = async () => {
         });
       }
       const place_id = req.query.placeId;
-      const fields = "name,geometry";
+      const fields = "name,geometry,adr_address";
       let url: string = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place_id}&fields=${fields}&key=${process.env.PLACES_KEY}`;
       let response = await axios.get(url);
       let data = response.data;
