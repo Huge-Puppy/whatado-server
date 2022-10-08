@@ -599,6 +599,7 @@ export class EventResolver {
       const event = await Event.create({
         time: options.time,
         location: options.location,
+        displayLocation: options.displayLocation,
         coordinates: options.coordinates,
         pictureUrl: options.pictureUrl,
         title: options.title,

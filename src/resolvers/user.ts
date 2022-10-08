@@ -50,11 +50,16 @@ export class UserResolver {
       user.requestedFriends = await User.findByIds(user.requestedFriendsIds);
       user.friendRequests = await User.findByIds(user.friendRequestsIds);
       user.groups = await Group.findByIds(user.groupsIds, {
-        relations: ["icon", "requested"],
+        relations: ["icon", "requested", "relatedInterests"],
+        order: {createdAt: "DESC"},
       });
       user.requestedGroups = await Group.createQueryBuilder("Group")
         .leftJoinAndSelect("Group.requested", "Group__requested")
+        .leftJoinAndSelect("Group.icon", "Group__icon")
+        .leftJoinAndSelect("Group.relatedInterests", "Group__relatedInterests")
         .relation("requested")
+        .relation("relatedInterests")
+        .relation("icon")
         .select()
         .where("Group__requested.id = :userId", { userId: user.id })
         .getMany();

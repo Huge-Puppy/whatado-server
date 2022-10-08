@@ -9,16 +9,22 @@ export class GroupInput implements Partial<Group> {
   id?: number;
   @Field()
   name: string;
+  @Field()
+  displayLocation: string;
   @Field(() => Int)
   owner: number;
   @Field(() => [Int])
   userIds: number[];
+  @Field(() => [Int])
+  relatedInterestIds: number[];
   @Field(() => Int)
   groupIconId: number;
   @Field(() => PointScalar)
   location: Point;
   @Field()
   screened: boolean;
+  @Field()
+  private: boolean;
 }
 
 @InputType()
@@ -31,6 +37,8 @@ export class GroupFilterInput implements Partial<Group> {
   updatedAt?: Date;
   @Field({ nullable: true })
   name?: string;
+  @Field({ nullable: true })
+  displayLocation?: string;
   @Field(() => Int, { nullable: true })
   groupIconId?: number;
   @Field(() => Int, { nullable: true })
@@ -38,9 +46,13 @@ export class GroupFilterInput implements Partial<Group> {
   @Field(() => [Int], { nullable: true })
   userIds?: number[];
   @Field(() => [Int], { nullable: true })
+  relatedInterestIds?: number[];
+  @Field(() => [Int], { nullable: true })
   requestedIds?: number[];
   @Field(() => PointScalar, {nullable: true})
   location?: Point;
   @Field({ nullable: true })
   screened?: boolean;
+  @Field({ nullable: true })
+  private?: boolean;
 }

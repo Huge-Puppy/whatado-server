@@ -47,6 +47,10 @@ export class Event extends BaseEntity {
   @Column({ default: "" })
   location!: string;
 
+  @Field()
+  @Column({ default: "" })
+  displayLocation!: string;
+
   @Authorized(["MEMBER", "ADMIN"])
   @Field(() => PointScalar)
   @Index({ spatial: true })

@@ -19,6 +19,7 @@ import { GroupPhone } from "./GroupPhone";
 import { Point } from "geojson";
 import { PointScalar } from "../graphql_types/graphql_types";
 import { GroupIcon } from "./GroupIcon";
+import { Interest } from "./Interest";
 
 @ObjectType()
 @Entity()
@@ -44,8 +45,16 @@ export class Group extends BaseEntity {
   name: String;
 
   @Field()
+  @Column({ default: "" })
+  displayLocation: String;
+
+  @Field()
   @Column({ default: true })
   screened: boolean;
+
+  @Field()
+  @Column({ default: true })
+  private: boolean;
 
   @Field(() => PointScalar, { nullable: true })
   @Index({ spatial: true })
@@ -72,6 +81,13 @@ export class Group extends BaseEntity {
   })
   @JoinTable()
   requested: User[];
+
+  @Field(() => [Interest])
+  @ManyToMany(() => Interest, {
+    cascade: ["insert", "update"],
+  })
+  @JoinTable()
+  relatedInterests: Interest[];
 
   @Field(() => [User])
   @ManyToMany(() => User, (user) => user.groups, {

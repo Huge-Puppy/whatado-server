@@ -21,6 +21,7 @@ import * as admin from "firebase-admin";
 import { BoolApiResponse } from "./outputs/general";
 import { Admin } from "../entities/Admin";
 import { __prod__ } from "../constants";
+import { Interest } from "../entities/Interest";
 
 if (__prod__) {
   console.log = function () {};
@@ -42,7 +43,7 @@ export class GroupResolver {
   ): Promise<GroupApiResponse> {
     try {
       const group = await Group.findOneOrFail(options.id, {
-        relations: ["users", "requested"],
+        relations: ["users", "requested", "relatedInterests", "icon"],
       });
       if (!group.users.map((u) => u.id).includes(+payload!.userId)) {
         return {
@@ -54,6 +55,11 @@ export class GroupResolver {
             },
           ],
         };
+      }
+      if (options.relatedInterestIds) {
+        group.relatedInterests = options.relatedInterestIds.map((r) => {
+          return { id: r } as any;
+        });
       }
       if (options.requestedIds) {
         if (
@@ -83,11 +89,14 @@ export class GroupResolver {
 
         // make sure that  everyone you add is one of your friends or in the requestedIds
         const me = await User.findOneOrFail(payload!.userId, {
-          relations: ["friends", "inverseFriends"],
+          relations: ["friends", "inverseFriends", "relatedInterests", "icon"],
         });
         if (
           otherUsers.some(
-            (u) => !(me.id == u.id) && !me.friends.map((_u) => _u.id).includes(u.id) && !me.inverseFriends.map((_u) => _u.id).includes(u.id)
+            (u) =>
+              !(me.id == u.id) &&
+              !me.friends.map((_u) => _u.id).includes(u.id) &&
+              !me.inverseFriends.map((_u) => _u.id).includes(u.id)
           )
         ) {
           return {
@@ -143,6 +152,9 @@ export class GroupResolver {
       }
       if (options.location) {
         group.location = options.location;
+      }
+      if (options.displayLocation) {
+        group.displayLocation = options.displayLocation;
       }
       if (options.screened) {
         group.screened = options.screened;
@@ -218,7 +230,7 @@ export class GroupResolver {
       };
     }
   }
-  
+
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async leaveGroup(
@@ -227,9 +239,9 @@ export class GroupResolver {
   ): Promise<BoolApiResponse> {
     try {
       const group = await Group.findOneOrFail(id, {
-        relations: ["users"]
+        relations: ["users"],
       });
-      group.users = group.users.filter((u, _, __) => u.id != +(payload!.userId));
+      group.users = group.users.filter((u, _, __) => u.id != +payload!.userId);
       await group.save();
 
       return { ok: true, nodes: true };
@@ -255,13 +267,19 @@ export class GroupResolver {
       const users = options.userIds.map((id) => ({
         id: id,
       }));
+      const relatedInterests = options.relatedInterestIds.map((id) => ({
+        id: id,
+      }));
       const group = await Group.create({
         owner: options.owner,
         name: options.name,
         screened: options.screened,
+        private: options.private,
+        displayLocation: options.displayLocation,
         location: options.location,
         icon: { id: options.groupIconId } as any,
         users,
+        relatedInterests,
       }).save();
       return { ok: true, nodes: group };
     } catch (e) {
@@ -282,7 +300,7 @@ export class GroupResolver {
   async suggestedGroups(): Promise<GroupsApiResponse> {
     try {
       const groups = await Group.find({
-        relations: ["icon"],
+        relations: ["icon", "relatedInterests"],
         take: 50,
       });
       return { ok: true, nodes: groups };
@@ -308,7 +326,7 @@ export class GroupResolver {
     try {
       const groups = await Group.find({
         where: { name: ILike(`%${partial}%`) },
-        relations: ["icon"],
+        relations: ["icon", "relatedInterests"],
         take: 50,
       });
       return { ok: true, nodes: groups };
@@ -330,7 +348,7 @@ export class GroupResolver {
   async myGroups(@Ctx() { payload }: MyContext): Promise<GroupsApiResponse> {
     try {
       const me = await User.findOneOrFail(payload?.userId, {
-        relations: ["groups", "groups.users", "groups.icon"],
+        relations: ["groups", "groups.users", "groups.icon", "groups.relatedInterests"],
       });
       return { ok: true, nodes: me.groups };
     } catch (e) {
@@ -352,6 +370,14 @@ export class GroupResolver {
   }
 
   @FieldResolver()
+  async relatedInterests(@Root() group: Group) {
+    return Interest.createQueryBuilder()
+      .relation(Group, "relatedInterests")
+      .of(group)
+      .loadMany();
+  }
+
+  @FieldResolver()
   async requested(@Root() group: Group) {
     return User.createQueryBuilder()
       .relation(Group, "requested")
@@ -360,7 +386,10 @@ export class GroupResolver {
   }
 
   @FieldResolver()
-  async icon(@Root() icon: GroupIcon, @Ctx() { groupIconLoader }: MyContext) {
-    return groupIconLoader.load(icon.id);
+  async icon(@Root() group: Group) {
+    return GroupIcon.createQueryBuilder()
+      .relation(Group, "icon")
+      .of(group)
+      .loadOne();
   }
 }

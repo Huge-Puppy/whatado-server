@@ -18,6 +18,8 @@ export class EventInput implements Partial<Event> {
   pictureUrl?: string;
   @Field()
   location: string;
+  @Field()
+  displayLocation: string;
   @Field(() => PointScalar)
   coordinates: Point;
   @Field(() => [Int])
@@ -66,6 +68,8 @@ export class EventFilterInput implements Partial<Event> {
   pictureUrl?: string;
   @Field({ nullable: true })
   location?: string;
+  @Field({nullable: true})
+  displayLocation?: string;
   @Field(() => PointScalar, { nullable: true })
   coordinates?: Point;
   @Field({ nullable: true })
