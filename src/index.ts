@@ -26,6 +26,7 @@ import { createEventLoader } from "./resolvers/loaders/eventLoader";
 import { createChatLoader } from "./resolvers/loaders/chatLoader";
 import { createForumLoader } from "./resolvers/loaders/forumLoader";
 import { createWannagoLoader } from "./resolvers/loaders/wannagoLoader";
+import { createFriendRequestLoader } from "./resolvers/loaders/friendRequestLoader";
 import * as admin from "firebase-admin";
 import { ChatNotificationResolver } from "./resolvers/chat_notification";
 import { customAuthChecker } from "./middleware/authorized";
@@ -199,6 +200,7 @@ const main = async () => {
       wannagoLoader: createWannagoLoader(),
       groupLoader: createGroupLoader(),
       groupIconLoader: createGroupIconLoader(),
+      friendRequestLoader: createFriendRequestLoader(),
       isDataLoaderAttached: true,
     }),
   });

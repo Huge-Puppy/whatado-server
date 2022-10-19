@@ -813,16 +813,17 @@ export class EventResolver {
     }
   }
 
-  @Mutation(() => EventApiResponse)
+  @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
   async removeInvite(
     @Arg("eventId", () => Int) eventId: number,
     @Arg("userId", () => Int) userId: number,
     @Ctx() { payload }: MyContext
-  ): Promise<EventApiResponse> {
+  ): Promise<BoolApiResponse> {
     try {
       if (
         !(await this.isOwner(+payload!.userId, eventId)) &&
+        !(+payload!.userId == userId) &&
         !(await this.isUserAdmin(+payload!.userId))
       ) {
         return {
@@ -861,7 +862,7 @@ export class EventResolver {
       const i = event.invited.findIndex((u) => u.id == userId);
       event.invited.splice(i, 1);
       await event.save();
-      return { ok: true, nodes: event };
+      return { ok: true, nodes: true };
     } catch (e) {
       return { ok: false, errors: [{ field: "server", message: e.message }] };
     }
@@ -950,7 +951,7 @@ export class EventResolver {
           forum: event.forum,
         }).save();
 
-        // notify invitee
+        // notify owner
         const message = {
           data: { type: "event", eventId: `${event.id}` },
           notification: {
@@ -965,6 +966,31 @@ export class EventResolver {
         await admin
           .messaging()
           .sendToDevice(event.creator.deviceId, message, options)
+          .then((response) => {
+            console.log("Successfully sent message:", response);
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+
+        // notify invited
+        const message2 = {
+          data: {
+            type: "event",
+            eventId: `${event.id}`,
+          },
+          notification: {
+            title: "You're Invited!",
+            body: `You're invited to ${event.title}`,
+          },
+        };
+        const options2 = {
+          contentAvailable: true,
+          priority: "high",
+        };
+        await admin
+          .messaging()
+          .sendToDevice(user.deviceId, message2, options2)
           .then((response) => {
             console.log("Successfully sent message:", response);
           })
@@ -1013,7 +1039,7 @@ export class EventResolver {
     @Ctx() { payload }: MyContext
   ): Promise<BoolApiResponse> {
     try {
-      const wannago = await Wannago.findOneOrFail(id);
+      const wannago = await Wannago.findOneOrFail(id, {relations: ["event"]});
       if (
         !(await this.isOwner(+payload!.userId, wannago.event.id)) &&
         !(await this.isUserAdmin(+payload!.userId))

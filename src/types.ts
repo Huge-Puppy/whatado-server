@@ -9,6 +9,7 @@ import { createForumLoader } from "./resolvers/loaders/forumLoader";
 import { createWannagoLoader } from "./resolvers/loaders/wannagoLoader";
 import { createGroupLoader } from "./resolvers/loaders/groupLoader";
 import { createGroupIconLoader } from "./resolvers/loaders/groupIconLoader";
+import { createFriendRequestLoader } from "./resolvers/loaders/friendRequestLoader";
 
 export type MyContext = {
   req: Request;
@@ -21,6 +22,7 @@ export type MyContext = {
   chatLoader: ReturnType<typeof createChatLoader>;
   forumLoader: ReturnType<typeof createForumLoader>;
   wannagoLoader: ReturnType<typeof createWannagoLoader>;
+  friendRequestLoader: ReturnType<typeof createFriendRequestLoader>;
   groupLoader: ReturnType<typeof createGroupLoader>;
   groupIconLoader: ReturnType<typeof createGroupIconLoader>;
   isDataLoaderAttached: Boolean;

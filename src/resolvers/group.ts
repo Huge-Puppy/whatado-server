@@ -84,12 +84,11 @@ export class GroupResolver {
       if (options.userIds) {
         // TODO: prevent people from removing others from the group unless admin
         const users = await User.findByIds([...new Set(options.userIds)]);
-        const acceptedUsers = users.filter((u) => group.requested.includes(u));
-        const otherUsers = users.filter((u) => !group.requested.includes(u));
-
+        const acceptedUsers = users.filter((u) => group.requested.map((u) => u.id).includes(u.id));
+        const otherUsers = users.filter((u) => !group.requested.map((u) => u.id).includes(u.id));
         // make sure that  everyone you add is one of your friends or in the requestedIds
         const me = await User.findOneOrFail(payload!.userId, {
-          relations: ["friends", "inverseFriends", "relatedInterests", "icon"],
+          relations: ["friends", "inverseFriends"],
         });
         if (
           otherUsers.some(
@@ -185,7 +184,7 @@ export class GroupResolver {
   ): Promise<BoolApiResponse> {
     try {
       const group = await Group.findOneOrFail(id, {
-        relations: ["requested", "owner"],
+        relations: ["requested"],
       });
       group.requested = [...group.requested, { id: +payload!.userId } as any];
       await group.save();
@@ -325,7 +324,7 @@ export class GroupResolver {
     //TODO implement pagination
     try {
       const groups = await Group.find({
-        where: { name: ILike(`%${partial}%`) },
+        where: [{ name: ILike(`%${partial}%`) }, { private: false }],
         relations: ["icon", "relatedInterests"],
         take: 50,
       });
@@ -348,7 +347,12 @@ export class GroupResolver {
   async myGroups(@Ctx() { payload }: MyContext): Promise<GroupsApiResponse> {
     try {
       const me = await User.findOneOrFail(payload?.userId, {
-        relations: ["groups", "groups.users", "groups.icon", "groups.relatedInterests"],
+        relations: [
+          "groups",
+          "groups.users",
+          "groups.icon",
+          "groups.relatedInterests",
+        ],
       });
       return { ok: true, nodes: me.groups };
     } catch (e) {

@@ -27,6 +27,7 @@ import * as admin from "firebase-admin";
 import { Group } from "../entities/Group";
 import { Referral } from "../entities/Referral";
 import { __prod__ } from "../constants";
+import { FriendRequest } from "../entities/FriendRequest";
 
 if (__prod__) {
   console.log = function () {};
@@ -43,15 +44,26 @@ export class UserResolver {
           "chatNotifications",
           "myEvents",
           "blockedUsers",
+          "receivedFriendRequests",
+          "receivedFriendRequests.requester",
+          "sentFriendRequests",
+          "sentFriendRequests.requested",
         ],
       });
       user.friends = await User.findByIds(user.friendsIds);
       user.inverseFriends = await User.findByIds(user.inverseFriendsIds);
-      user.requestedFriends = await User.findByIds(user.requestedFriendsIds);
-      user.friendRequests = await User.findByIds(user.friendRequestsIds);
+
+      // user.receivedFriendRequests = await FriendRequest.createQueryBuilder()
+      //   .relation(User, "receivedFriendRequests")
+      //   .of(user)
+      //   .loadMany();
+      // user.sentFriendRequests = await FriendRequest.createQueryBuilder()
+      //   .relation(User, "sentFriendRequests")
+      //   .of(user)
+      //   .loadMany();
       user.groups = await Group.findByIds(user.groupsIds, {
         relations: ["icon", "requested", "relatedInterests"],
-        order: {createdAt: "DESC"},
+        order: { createdAt: "DESC" },
       });
       user.requestedGroups = await Group.createQueryBuilder("Group")
         .leftJoinAndSelect("Group.requested", "Group__requested")
@@ -81,10 +93,11 @@ export class UserResolver {
     @Arg("numbers", () => [String]) numbers: string[]
   ): Promise<StringsApiResponse> {
     try {
-      if (numbers.length == 0) return {
-        nodes: [],
-        ok: true,
-      };
+      if (numbers.length == 0)
+        return {
+          nodes: [],
+          ok: true,
+        };
       const users = await User.find({ where: { phone: In(numbers) } });
       const usernumbers = users.map((u) => u.phone);
       const returnval = numbers.filter((n) => !usernumbers.includes(n));
@@ -717,12 +730,13 @@ export class UserResolver {
     @Arg("id", () => Int) id: number
   ) {
     try {
-      const me = await User.findOneOrFail(payload!.userId, {
-        relations: ["requestedFriends"],
-      });
+      const me = await User.findOneOrFail(+payload!.userId);
       const other = await User.findOneOrFail(id);
-      me.requestedFriends = [...me.requestedFriends, other];
-      await me.save();
+      await FriendRequest.create({
+        declined: false,
+        requester: me,
+        requested: other,
+      }).save();
       const message = {
         data: { type: "friend", userId: `${me.id}` },
         notification: {
@@ -761,13 +775,13 @@ export class UserResolver {
     @Arg("id", () => Int) id: number
   ) {
     try {
-      const me = await User.findOneOrFail(payload!.userId, {
-        relations: ["requestedFriends"],
+      const friendRequest = await FriendRequest.findOneOrFail({
+        where: {
+          requested: { id } as any,
+          requester: { id: +payload!.userId } as any,
+        },
       });
-      me.requestedFriends = me.requestedFriends.filter(
-        (user, _, __) => user.id != id
-      );
-      await me.save();
+      await friendRequest.remove();
       return {
         ok: true,
         nodes: true,
@@ -782,51 +796,47 @@ export class UserResolver {
 
   @Mutation(() => BoolApiResponse)
   @UseMiddleware(isAuth)
-  async acceptFriend(
+  async decideFriend(
     @Ctx() { payload }: MyContext,
-    @Arg("id", () => Int) id: number
+    @Arg("id", () => Int) id: number,
+    @Arg("accept", () => Boolean) accept: boolean
   ) {
     try {
       const me = await User.findOneOrFail(payload!.userId, {
         relations: ["friendRequests", "friends"],
       });
+      const request = await FriendRequest.findOneOrFail({requester: {id} as any, requested: me});
       const other = await User.findOneOrFail(id);
-      if (!me.friendRequests.some((u) => u.id == other.id)) {
-        return {
-          ok: false,
-          errors: [
-            {
-              field: "accept friend",
-              message:
-                "user must request to be friends before accepting as friend",
-            },
-          ],
-        };
-      }
-      me.friendRequests = me.friendRequests.filter((user) => user.id != id);
-      me.friends = [...me.friends, other];
-      await me.save();
+      if (accept) {
+        await request.remove();
+        me.friends = [...me.friends, other];
+        await me.save();
 
-      const message = {
-        data: { type: "friend", userId: `${me.id}` },
-        notification: {
-          title: "New Friend",
-          body: `${me.name} is now your friend!`,
-        },
-      };
-      const options = {
-        contentAvailable: true,
-        priority: "high",
-      };
-      await admin
-        .messaging()
-        .sendToDevice(other.deviceId, message, options)
-        .then((response) => {
-          console.log("Successfully sent message:", response);
-        })
-        .catch((error) => {
-          console.log("Error sending message:", error);
-        });
+        const message = {
+          data: { type: "friend", userId: `${me.id}` },
+          notification: {
+            title: "New Friend",
+            body: `${me.name} is now your friend!`,
+          },
+        };
+        const options = {
+          contentAvailable: true,
+          priority: "high",
+        };
+        await admin
+          .messaging()
+          .sendToDevice(other.deviceId, message, options)
+          .then((response) => {
+            console.log("Successfully sent message:", response);
+          })
+          .catch((error) => {
+            console.log("Error sending message:", error);
+          });
+      } else {
+        // reject or ignore request
+        request.declined = true;
+        await request.save();
+      }
 
       return {
         ok: true,

@@ -19,6 +19,7 @@ import { ChatNotification } from "./ChatNotification";
 import { Gender } from "../types";
 import { Group } from "./Group";
 import { PointScalar } from "../graphql_types/graphql_types";
+import { FriendRequest } from "./FriendRequest";
 
 @ObjectType()
 @Entity()
@@ -146,14 +147,6 @@ export class User extends BaseEntity {
   @RelationId((user: User) => user.inverseFriends)
   inverseFriendsIds: number[];
 
-  @Field(() => [User])
-  @ManyToMany(() => User, (u) => u.friendRequests, {
-    cascade: ["insert", "update"],
-    onDelete: "CASCADE",
-  })
-  @JoinTable()
-  requestedFriends: User[];
-
   @Field(() => [Group])
   @ManyToMany(() => Group, (g) => g.requested, {
     cascade: ["insert", "update"],
@@ -161,20 +154,17 @@ export class User extends BaseEntity {
   })
   requestedGroups: Group[];
 
-  @Field(() => [Int])
-  @RelationId((user: User) => user.requestedFriends)
-  requestedFriendsIds: number[];
-
-  @Field(() => [User])
-  @ManyToMany(() => User, (u) => u.requestedFriends, {
-    cascade: ["insert", "update"],
-    onDelete: "CASCADE",
+  @Field(() => [FriendRequest])
+  @OneToMany(() => FriendRequest, (fr) => fr.requester, {
+    cascade: ["update", "insert"],
   })
-  friendRequests: User[];
+  sentFriendRequests: FriendRequest[];
 
-  @Field(() => [Int])
-  @RelationId((user: User) => user.friendRequests)
-  friendRequestsIds: number[];
+  @Field(() => [FriendRequest])
+  @OneToMany(() => FriendRequest, (fr) => fr.requested, {
+    cascade: ["update", "insert"],
+  })
+  receivedFriendRequests: FriendRequest[];
 
   @Field(() => [Event])
   @OneToMany(() => Event, (event) => event.creator, {
