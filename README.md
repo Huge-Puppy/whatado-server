@@ -1,6 +1,6 @@
 # whatado-server
 
-## For Nate:
+api server for the Whatado app. 
 
 all the database queries happen in the resolvers. TypeOrm is the library we use to interact with the PostgreSQL database. 
 Graphql passes the parameters to the resolver functions. Models are defined in src/entities. TypeOrm has decorators on the 
